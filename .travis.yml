@@ -11,4 +11,4 @@ addons:
       - libzbar-dev
 
 script:
-- travis_wait cargo test --verbose --all-features
+- travis_wait cargo test --verbose
