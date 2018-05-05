@@ -1,0 +1,12 @@
+rust:
+  - stable
+  - beta
+  - nightly
+
+addons:
+  apt:
+    packages:
+      - libzbar-dev
+
+script:
+- travis_wait cargo test --verbose --all-features
