@@ -20,7 +20,7 @@ impl ImageScanner {
     pub fn enable_cache(&mut self, enable: bool) {
         unsafe { zbar_image_scanner_enable_cache(**self, enable as i32); }
     }
-    pub fn recycle_image(&mut self, image: Option<&mut ZbarImage>) {
+    pub fn recycle_image(&mut self, image: Option<&mut ZBarImage>) {
         unsafe {
             zbar_image_scanner_recycle_image(**self, image.map_or(::std::ptr::null_mut(), |i| **i))
         }
@@ -28,7 +28,7 @@ impl ImageScanner {
     pub fn results(&self) -> Option<SymbolSet> {
         SymbolSet::from_raw(unsafe { zbar_image_scanner_get_results(**self) })
     }
-    pub fn scan_image(&self, image: &ZbarImage) -> ZBarSimpleResult<Option<SymbolSet>> {
+    pub fn scan_image(&self, image: &ZBarImage) -> ZBarSimpleResult<Option<SymbolSet>> {
         let result: i32 = unsafe { zbar_scan_image(**self, **image) };
         match result >= 0 {
             true  => Ok(image.symbols()),
@@ -36,6 +36,11 @@ impl ImageScanner {
         }
     }
 }
+
+unsafe impl Send for ImageScanner {}
+
+unsafe impl Sync for ImageScanner {}
+
 impl Default for ImageScanner {
     fn default() -> Self {
         let mut scanner = ImageScanner {
@@ -87,7 +92,7 @@ mod test {
 
     #[test]
     fn test_qrcode() {
-        let image = ZbarImage::from_path("test/qrcode.png").unwrap();
+        let image = ZBarImage::from_path("test/qrcode.png").unwrap();
 
         let scanner = ImageScannerBuilder::new()
             .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
@@ -104,7 +109,7 @@ mod test {
 
     #[test]
     fn test_qrcode_disabled() {
-        let image = ZbarImage::from_path("test/qrcode.png").unwrap();
+        let image = ZBarImage::from_path("test/qrcode.png").unwrap();
 
         let scanner = ImageScannerBuilder::new()
             .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 0)
@@ -122,7 +127,7 @@ mod test {
 
     #[test]
     fn test_code128() {
-        let image = ZbarImage::from_path("test/code128.gif").unwrap();
+        let image = ZBarImage::from_path("test/code128.gif").unwrap();
 
         let scanner = ImageScannerBuilder::new()
             .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 1)
@@ -140,7 +145,7 @@ mod test {
 
     #[test]
     fn test_code128_disabled() {
-        let image = ZbarImage::from_path("test/code128.gif").unwrap();
+        let image = ZBarImage::from_path("test/code128.gif").unwrap();
 
         let scanner = ImageScannerBuilder::new()
             .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 0)
@@ -159,7 +164,7 @@ mod test {
 
     #[test]
     fn test_recycle_image() {
-        let mut image = ZbarImage::from_path("test/code128.gif").unwrap();
+        let mut image = ZBarImage::from_path("test/code128.gif").unwrap();
 
         let mut scanner = ImageScannerBuilder::new()
             .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 1)

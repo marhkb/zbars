@@ -1,4 +1,4 @@
-use image::ZbarImage;
+use image::ZBarImage;
 use super::*;
 use symbolset::SymbolSet;
 use std::ffi::OsString;
@@ -137,10 +137,15 @@ impl Processor {
         unsafe { zbar_process_one(**self, timeout) }
     }
     //TODO: special type as return
-    pub fn process_image(&self, image: &ZbarImage) -> i32 {
+    pub fn process_image(&self, image: &ZBarImage) -> i32 {
         unsafe { zbar_process_image(**self, **image) }
     }
 }
+
+unsafe impl Send for Processor {}
+
+unsafe impl Sync for Processor {}
+
 impl Deref for Processor {
     type Target = *mut zbar_processor_s;
     fn deref(&self) -> &<Self as Deref>::Target { &self.processor }
@@ -244,7 +249,7 @@ mod test {
     #[test]
     #[cfg(feature = "from_image")]
     fn test_scan_image() {
-        let image = ZbarImage::from_path("test/qrcode.png").unwrap();
+        let image = ZBarImage::from_path("test/qrcode.png").unwrap();
 
         let processor = Processor::builder()
             .threaded(true)
