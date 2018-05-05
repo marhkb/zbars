@@ -104,8 +104,6 @@ pub fn parse_config() {
 
 #[cfg(test)]
 mod test {
-    extern crate libc;
-
     use super::*;
 
     #[test]
@@ -116,12 +114,5 @@ mod test {
     #[test]
     fn test_symbol_name() {
         assert_eq!(symbol_name(ZBarSymbolType::ZBAR_QRCODE), "QR-Code")
-    }
-
-    extern {
-        fn je_stats_print (write_cb: extern fn (*const libc::c_void, *const libc::c_char), cbopaque: *const libc::c_void, opts: *const libc::c_char);
-    }
-    extern fn write_cb (_: *const libc::c_void, message: *const libc::c_char) {
-        print! ("{}", String::from_utf8_lossy (unsafe {std::ffi::CStr::from_ptr (message as *const i8) .to_bytes()}));
     }
 }
