@@ -6,12 +6,13 @@ use super::*;
 use symbol::*;
 use symbolset::*;
 
-pub struct ZBarImage {
+pub struct ZBarImage<'a> {
     image: *mut zbar_image_s,
+    buf: Option<&'a [u8]>,
 }
-impl ZBarImage {
-    unsafe fn from_raw(image: *mut zbar_image_s) -> Self { Self { image } }
-    pub fn new(width: u32, height: u32, buf: Vec<u8>) -> Self {
+impl<'a> ZBarImage<'a> {
+    unsafe fn from_raw(image: *mut zbar_image_s, buf: Option<&'a [u8]>) -> Self { Self { image, buf } }
+    pub fn from_buf(width: u32, height: u32, buf: Vec<u8>) -> Self {
         assert_eq!((width * height) as usize, buf.len());
 
         unsafe {
@@ -26,23 +27,41 @@ impl ZBarImage {
                 Some(zbar_image_free_data)
             );
 
+            let image = Self::from_raw(image, None);
+
             ::std::mem::forget(buf);
 
-            Self::from_raw(image)
+            image
+        }
+    }
+    pub fn from_slice(width: u32, height: u32, slice: &'a [u8]) -> Self {
+        unsafe {
+            let image = zbar_image_create();
+            //TODO: Let user specify format
+            zbar_image_set_format(image, Format::Y800 as u64);
+            zbar_image_set_size(image, width, height);
+            zbar_image_set_data(
+                image,
+                slice.as_ptr() as *mut c_void,
+                slice.len() as u64,
+                None
+            );
+
+            Self::from_raw(image, Some(slice))
         }
     }
     pub fn image_ref(&mut self) {
         //TODO: Needed?
         unimplemented!("TBD")
     }
-    pub fn convert(&self, format: Format) -> ZBarImage {
-        unsafe { Self::from_raw(zbar_image_convert(**self, format as u64)) }
+    pub fn convert(&self, format: Format) -> Self {
+        unsafe { Self::from_raw(zbar_image_convert(**self, format as u64), None) }
     }
     pub fn convert_resize(&self, _format: Format, _width: u32, _height: u32) -> ZBarImage {
         //TODO: exits with SIGSEGV
         unimplemented!("TBD: exits with SIGSEGV")
 //        unsafe {
-//            Self::from_raw(zbar_image_convert_resize(**self, format as u64, width, height))
+//            Self::from_raw(zbar_image_convert_resize(**self, format as u64, width, height), None)
 //        }
     }
     pub fn format(&self) -> Format {
@@ -113,7 +132,7 @@ impl ZBarImage {
 }
 
 #[cfg(feature = "zbar_fork")]
-impl ZBarImage {
+impl<'a> ZBarImage<'a> {
     pub fn size(&self) -> (u32, u32) {
         unsafe {
             let mut dim = (0, 0);
@@ -136,11 +155,11 @@ impl ZBarImage {
         unsafe { zbar_image_set_crop(**self, x, y, width, height) }
     }
 }
-impl Deref for ZBarImage {
+impl<'a> Deref for ZBarImage<'a> {
     type Target = *mut zbar_image_s;
-    fn deref(&self) -> &<Self as Deref>::Target { &self.image }
+    fn deref(&self) -> &Self::Target { &self.image }
 }
-impl Drop for ZBarImage {
+impl<'a> Drop for ZBarImage<'a> {
     fn drop(&mut self) { unsafe { zbar_image_destroy(**self) } }
 }
 
@@ -155,7 +174,7 @@ pub mod from_image {
     };
     use super::*;
 
-    impl ZBarImage {
+    impl<'a> ZBarImage<'a> {
         pub fn from_path<P>(path: P) -> ImageResult<Self> where P: AsRef<Path> {
             image::open(&path).map(Self::from_image)
         }
@@ -166,7 +185,7 @@ pub mod from_image {
         {
             let image = image::imageops::grayscale(&image);
 
-            ZBarImage::new(
+            ZBarImage::from_buf(
                 image.dimensions().0,
                 image.dimensions().1,
                 image.pixels().map(|p| u8::from(p.data[0])).collect::<Vec<u8>>()
@@ -192,12 +211,12 @@ mod test_zbar_fork {
 
     #[test]
     fn test_size() {
-        assert_eq!(ZBarImage::new(2, 3, [0; 2 * 3].to_vec()).size(), (2, 3));
+        assert_eq!(ZBarImage::from_buf(2, 3, [0; 2 * 3].to_vec()).size(), (2, 3));
     }
 
     #[test]
     fn test_crop_get_and_set() {
-        let mut image = ZBarImage::new(20, 30, [0; 20 * 30].to_vec());
+        let mut image = ZBarImage::from_buf(20, 30, [0; 20 * 30].to_vec());
         assert_eq!(image.crop(), (0, 0, 20, 30));
         image.set_crop(5, 5, 10, 10);
         assert_eq!(image.crop(), (5, 5, 10, 10));
@@ -208,16 +227,31 @@ mod test_zbar_fork {
 mod test {
     use super::*;
 
-    #[test]
-    fn test() {
-//        for _ in 0..1000 {
-//            let image = ZbarImage::new(500, 500, [0; 500 * 500].to_vec());
-//        }
+//    #[test]
+    fn test_mem_from_buf() {
+        for _ in 0..1000000 {
+            let buf = [0; 500 * 500];
+            ZBarImage::from_buf(500, 500, buf.to_vec());
+        }
     }
+
+//    #[test]
+    fn test_mem_from_slice() {
+        for _ in 0..1000000 {
+            let buf = [0; 500 * 500];
+            ZBarImage::from_slice(500, 500, buf.as_ref());
+        }
+    }
+
+    // If this does not compile everything is fine
+//    fn from_slice() -> ZBarImage<'static> {
+//        let buf = [0; 500 * 500];
+//        ZBarImage::from_slice(500, 500, buf.as_ref())
+//    }
 
     #[test]
     fn test_convert() {
-        let image = ZBarImage::new(2, 3, [0; 2 * 3].to_vec());
+        let image = ZBarImage::from_buf(2, 3, [0; 2 * 3].to_vec());
         let format = Format::Y800;
         assert_eq!(image.convert(format).format(), format)
     }
@@ -234,12 +268,12 @@ mod test {
 //    }
     #[test]
     fn format() {
-        assert_eq!(ZBarImage::new(2, 3, [0; 2 * 3].to_vec()).format(), Format::Y800);
+        assert_eq!(ZBarImage::from_buf(2, 3, [0; 2 * 3].to_vec()).format(), Format::Y800);
     }
 
     #[test]
     fn test_sequence_set_and_get() {
-        let mut image = ZBarImage::new(2, 3, [0; 2 * 3].to_vec());
+        let mut image = ZBarImage::from_buf(2, 3, [0; 2 * 3].to_vec());
         assert_eq!(image.sequence(), 0);
         image.set_sequence(1);
         assert_eq!(image.sequence(), 1);
@@ -249,24 +283,24 @@ mod test {
 
     #[test]
     fn test_width() {
-        assert_eq!(ZBarImage::new(2, 3, [0; 2 * 3].to_vec()).width(), 2);
+        assert_eq!(ZBarImage::from_buf(2, 3, [0; 2 * 3].to_vec()).width(), 2);
     }
 
     #[test]
     fn test_height() {
-        assert_eq!(ZBarImage::new(2, 3, [0; 2 * 3].to_vec()).height(), 3);
+        assert_eq!(ZBarImage::from_buf(2, 3, [0; 2 * 3].to_vec()).height(), 3);
     }
 
     #[test]
     fn test_data() {
         let buf = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].to_vec();
-        let image = ZBarImage::new(3, 4, buf.clone());
+        let image = ZBarImage::from_buf(3, 4, buf.clone());
         assert_eq!(buf.as_slice(), image.data());
     }
 
     #[test]
     fn test_symbols_get_and_set() {
-        let mut image = ZBarImage::new(20, 30, [0; 20 * 30].to_vec());
+        let mut image = ZBarImage::from_buf(20, 30, [0; 20 * 30].to_vec());
         assert!(image.symbols().is_none());
         image.set_symbols(None);
         assert!(image.symbols().is_none());
@@ -274,20 +308,20 @@ mod test {
 
     #[test]
     fn test_first_symbol() {
-        assert!(ZBarImage::new(20, 30, [0; 20 * 30].to_vec()).first_symbol().is_none());
+        assert!(ZBarImage::from_buf(20, 30, [0; 20 * 30].to_vec()).first_symbol().is_none());
     }
 
     #[test]
     fn test_write() {
         let path = std::env::temp_dir().join("zbar_image");
-        let image = ZBarImage::new(2, 3, [0; 2 * 3].to_vec());
+        let image = ZBarImage::from_buf(2, 3, [0; 2 * 3].to_vec());
         assert!(image.write(&path).is_ok());
     }
 
     #[test]
     fn test_write_fail() {
         let path = Path::new("/nowhere/nothing");
-        let image = ZBarImage::new(2, 3, [0; 2 * 3].to_vec());
+        let image = ZBarImage::from_buf(2, 3, [0; 2 * 3].to_vec());
         assert!(image.write(&path).is_err());
     }
 }

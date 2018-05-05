@@ -148,7 +148,7 @@ unsafe impl Sync for Processor {}
 
 impl Deref for Processor {
     type Target = *mut zbar_processor_s;
-    fn deref(&self) -> &<Self as Deref>::Target { &self.processor }
+    fn deref(&self) -> &Self::Target { &self.processor }
 }
 impl Drop for Processor {
     fn drop(&mut self) { unsafe { zbar_processor_destroy(**self) } }

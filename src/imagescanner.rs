@@ -52,7 +52,7 @@ impl Default for ImageScanner {
 }
 impl Deref for ImageScanner {
     type Target = *mut zbar_image_scanner_s;
-    fn deref(&self) -> &<Self as Deref>::Target { &self.scanner }
+    fn deref(&self) -> &Self::Target { &self.scanner }
 }
 impl Drop for ImageScanner {
     fn drop(&mut self) { unsafe { zbar_image_scanner_destroy(**self) } }

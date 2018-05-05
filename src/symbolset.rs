@@ -30,7 +30,7 @@ impl SymbolSet {
 }
 impl Deref for SymbolSet {
     type Target = *const zbar_symbol_set_s;
-    fn deref(&self) -> &<Self as Deref>::Target { &self.symbol_set }
+    fn deref(&self) -> &Self::Target { &self.symbol_set }
 }
 
 pub struct SymbolIter {
