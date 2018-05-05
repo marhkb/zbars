@@ -31,6 +31,7 @@ pub type ZBarResult<T> = ::std::result::Result<T, ZBarErrorType>;
 pub type ZBarSimpleResult<T> = ::std::result::Result<T, i32>;
 
 //TODO: other formats
+#[repr(C)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Format {
     Y800 = 0x59455247,

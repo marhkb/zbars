@@ -8,7 +8,6 @@ use symbolset::*;
 
 pub struct ZbarImage {
     image: *mut zbar_image_s,
-//    buf: Vec<u8>,
 }
 impl ZbarImage {
     unsafe fn from_raw(image: *mut zbar_image_s) -> Self { Self { image } }
