@@ -1,6 +1,6 @@
 [package]
 name = "zbar-rs"
-version = "0.1.0"
+version = "0.2.0-dev"
 authors = ["Marcus Behrendt <marcus.behrendt.86@gmail.com>"]
 license = "LGPL-2.1"
 description = "High-level rust bindings zo the zbar library"
