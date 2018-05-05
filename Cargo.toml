@@ -11,6 +11,9 @@ categories = ["api-bindings", "multimedia", "multimedia::images", "external-ffi-
 maintenance = { status = "experimental" }
 build = "build.rs"
 
+[badges]
+travis-ci = { repository = "marhkb/zbar-rs" }
+
 [features]
 default = ["from_image"]
 zbar_fork = [] # There is a fork of zbar that is more activly developed (https://github.com/procxx/zbar)
