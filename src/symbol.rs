@@ -19,11 +19,6 @@ impl Symbol {
     pub fn symbol_type(&self) -> ZBarSymbolType {
         unsafe { mem::transmute(zbar_symbol_get_type(**self)) }
     }
-    pub fn configs(&self) -> u32 { unsafe { zbar_symbol_get_configs(**self) } }
-    pub fn modifiers(&self) -> ZBarModifier {
-        //TODO: zbar.h says a bitmask is returned but zbar_modifier_e is not a bitmask
-        unsafe { ::std::mem::transmute(zbar_symbol_get_modifiers(**self)) }
-    }
     pub fn data(&self) -> &str {
         unsafe { CStr::from_ptr(zbar_symbol_get_data(**self)).to_str().unwrap() }
     }
@@ -50,7 +45,6 @@ impl Symbol {
             y  => Some(y),
         }
     }
-    pub fn orientation(&self) -> ZBarOrientation { unsafe { zbar_symbol_get_orientation (**self) } }
     pub fn next(&self) -> Option<Self> { Self::from_raw(unsafe { zbar_symbol_next(**self) }) }
     pub fn components(&self) -> Option<SymbolSet> {
         SymbolSet::from_raw(unsafe { zbar_symbol_get_components(**self) } )
@@ -64,6 +58,16 @@ impl Symbol {
     }
 
     pub fn polygon(&self) -> SymbolPolygon { self.into() }
+}
+
+#[cfg(feature = "fork")]
+impl Symbol {
+    pub fn configs(&self) -> u32 { unsafe { zbar_symbol_get_configs(**self) } }
+    pub fn modifiers(&self) -> ZBarModifier {
+        //TODO: zbar.h says a bitmask is returned but zbar_modifier_e is not a bitmask
+        unsafe { ::std::mem::transmute(zbar_symbol_get_modifiers(**self)) }
+    }
+    pub fn orientation(&self) -> ZBarOrientation { unsafe { zbar_symbol_get_orientation (**self) } }
 }
 impl Deref for Symbol {
     type Target = *const zbar_symbol_s;

@@ -52,24 +52,6 @@ impl ZbarImage {
     pub fn sequence(&self) -> u32 { unsafe { zbar_image_get_sequence(**self) } }
     pub fn width(&self) -> u32 { unsafe { zbar_image_get_width(**self) } }
     pub fn height(&self) -> u32 { unsafe { zbar_image_get_height(**self) } }
-    pub fn size(&self) -> (u32, u32) {
-        unsafe {
-            let mut dim = (0, 0);
-            zbar_image_get_size(**self, &mut dim.0 as *mut u32, &mut dim.1 as *mut u32);
-            dim
-        }
-    }
-    pub fn crop(&self) -> (u32, u32, u32, u32) {
-        unsafe {
-            let mut crop = (0, 0, 0, 0);
-            zbar_image_get_crop(
-                **self,
-                &mut crop.0 as *mut u32, &mut crop.1 as *mut u32,
-                &mut crop.2 as *mut u32, &mut crop.3 as *mut u32
-            );
-            crop
-        }
-    }
     pub fn data(&self) -> &[u8] {
         unsafe {
             from_raw_parts(
@@ -98,9 +80,6 @@ impl ZbarImage {
 //    pub fn set_size(&mut self, width: u32, height: u32) {
 //        unsafe { zbar_image_set_size(**self, width, height) }
 //    }
-    pub fn set_crop(&mut self, x: u32, y: u32, width: u32, height: u32) {
-        unsafe { zbar_image_set_crop(**self, x, y, width, height) }
-    }
     pub fn set_userdata(&mut self, userdata: Vec<u8>) {
         //TODO
         unimplemented!("TBD")
@@ -131,6 +110,31 @@ impl ZbarImage {
 //            }
 //        }
         unimplemented!("zbar.h days: TBD")
+    }
+}
+
+#[cfg(feature = "fork")]
+impl ZbarImage {
+    pub fn size(&self) -> (u32, u32) {
+        unsafe {
+            let mut dim = (0, 0);
+            zbar_image_get_size(**self, &mut dim.0 as *mut u32, &mut dim.1 as *mut u32);
+            dim
+        }
+    }
+    pub fn crop(&self) -> (u32, u32, u32, u32) {
+        unsafe {
+            let mut crop = (0, 0, 0, 0);
+            zbar_image_get_crop(
+                **self,
+                &mut crop.0 as *mut u32, &mut crop.1 as *mut u32,
+                &mut crop.2 as *mut u32, &mut crop.3 as *mut u32
+            );
+            crop
+        }
+    }
+    pub fn set_crop(&mut self, x: u32, y: u32, width: u32, height: u32) {
+        unsafe { zbar_image_set_crop(**self, x, y, width, height) }
     }
 }
 impl Deref for ZbarImage {
@@ -183,9 +187,27 @@ pub mod from_image {
 }
 
 #[cfg(test)]
+#[cfg(feature = "fork")]
 mod test {
     use super::*;
 
+    #[test]
+    fn test_size() {
+        assert_eq!(ZbarImage::new(2, 3, [0; 2 * 3].to_vec()).size(), (2, 3));
+    }
+
+    #[test]
+    fn test_crop_get_and_set() {
+        let mut image = ZbarImage::new(20, 30, [0; 20 * 30].to_vec());
+        assert_eq!(image.crop(), (0, 0, 20, 30));
+        image.set_crop(5, 5, 10, 10);
+        assert_eq!(image.crop(), (5, 5, 10, 10));
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
 
     #[test]
     fn test() {
@@ -234,19 +256,6 @@ mod test {
     #[test]
     fn test_height() {
         assert_eq!(ZbarImage::new(2, 3, [0; 2 * 3].to_vec()).height(), 3);
-    }
-
-    #[test]
-    fn test_size() {
-        assert_eq!(ZbarImage::new(2, 3, [0; 2 * 3].to_vec()).size(), (2, 3));
-    }
-
-    #[test]
-    fn test_crop_get_and_set() {
-        let mut image = ZbarImage::new(20, 30, [0; 20 * 30].to_vec());
-        assert_eq!(image.crop(), (0, 0, 20, 30));
-        image.set_crop(5, 5, 10, 10);
-        assert_eq!(image.crop(), (5, 5, 10, 10));
     }
 
     #[test]

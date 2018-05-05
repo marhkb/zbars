@@ -1,9 +1,15 @@
+extern crate pkg_config;
 extern crate bindgen;
 
 use std::env;
 use std::path::PathBuf;
 
 fn main() {
+
+    let config = pkg_config::Config::new().atleast_version("0.10").probe("zbar").unwrap();
+    if config.version.parse::<f64>().unwrap() >= 0.2 {
+        println!("cargo:rustc-cfg=feature=\"zbar_fork\"");
+    }
 
     // Tell cargo to tell rustc to link the system bzip2
     // shared library.

@@ -20,10 +20,13 @@ impl SymbolSet {
     pub fn first_symbol(&self) -> Option<Symbol> {
         Symbol::from_raw(unsafe { zbar_symbol_set_first_symbol(**self) })
     }
+    pub fn iter(&self) -> SymbolIter { self.first_symbol().into() }
+}
+#[cfg(feature = "fork")]
+impl SymbolSet {
     pub fn first_symbol_unfiltered(&self) -> Option<Symbol> {
         Symbol::from_raw(unsafe { zbar_symbol_set_first_unfiltered(**self) })
     }
-    pub fn iter(&self) -> SymbolIter { self.first_symbol().into() }
 }
 impl Deref for SymbolSet {
     type Target = *const zbar_symbol_set_s;
