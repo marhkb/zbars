@@ -78,9 +78,8 @@ impl ImageScannerBuilder {
 
 
 #[cfg(test)]
+#[cfg(feature = "from_image")]
 mod test {
-    #![feature = "from_image"]
-
     extern crate image;
 
     use symbol::Symbol;

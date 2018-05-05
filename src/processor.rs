@@ -17,7 +17,7 @@ impl Processor {
     }
     pub fn builder() -> ProcessorBuilder { ProcessorBuilder::new() }
 
-    pub fn init<T>(&self, video_device: T, enable_display: bool) -> ZBarSimpleResult<()> where T: AsRef<str> {
+    pub fn init<T>(&mut self, video_device: T, enable_display: bool) -> ZBarSimpleResult<()> where T: AsRef<str> {
         let result = unsafe {
             zbar_processor_init(
                 **self,
@@ -49,7 +49,7 @@ impl Processor {
         //TODO
         unimplemented!("TBD")
     }
-    pub fn userdata(&mut self) {
+    pub fn userdata(&self) {
         //TODO
         unimplemented!("TBD")
     }
@@ -62,7 +62,7 @@ impl Processor {
             false => Err(result.into())
         }
     }
-    pub fn set_control<T>(&self, control_name: T, value: i32) -> ZBarSimpleResult<()> where T: AsRef<str> {
+    pub fn set_control<T>(&mut self, control_name: T, value: i32) -> ZBarSimpleResult<()> where T: AsRef<str> {
         //TODO
         unimplemented!("TBD")
 //        let result = unsafe {
@@ -104,7 +104,7 @@ impl Processor {
             }
         }
     }
-    pub fn set_visible(&self, visible: bool) -> ZBarSimpleResult<bool> {
+    pub fn set_visible(&mut self, visible: bool) -> ZBarSimpleResult<bool> {
         let result = unsafe { zbar_processor_set_visible(**self, visible as i32) };
         match result > 0 {
             true  => Ok(true),
@@ -114,7 +114,7 @@ impl Processor {
             }
         }
     }
-    pub fn set_active(&self, active: bool) -> ZBarSimpleResult<bool> {
+    pub fn set_active(&mut self, active: bool) -> ZBarSimpleResult<bool> {
         let result = unsafe { zbar_processor_set_active(**self, active as i32) };
         match result > 0 {
             true  => Ok(true),
@@ -246,7 +246,7 @@ mod test {
     fn test_scan_image() {
         let image = ZbarImage::from_path("test/qrcode.png").unwrap();
 
-        let mut processor = Processor::builder()
+        let processor = Processor::builder()
             .threaded(true)
             .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
             .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 1)
