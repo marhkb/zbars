@@ -7,6 +7,8 @@ description = "High-level rust bindings zo the zbar library"
 repository = "https://github.com/marhkb/zbar-rs.git"
 readme = "README.md"
 keywords = ["bindings", "barcode reader"]
+categories = ["api-bindings", "multimedia", "multimedia::images", "external-ffi-bindings", ]
+maintenance = { status = "experimental" }
 build = "build.rs"
 
 [features]
