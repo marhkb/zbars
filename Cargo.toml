@@ -2,7 +2,7 @@
 name = "zbar-rs"
 version = "0.1.0"
 authors = ["Marcus Behrendt <marcus.behrendt.86@gmail.com>"]
-license = "LGPL 2.1"
+license = "LGPL-2.1"
 description = "High-level rust bindings zo the zbar library"
 repository = "https://github.com/marhkb/zbar-rs.git"
 readme = "README.md"
