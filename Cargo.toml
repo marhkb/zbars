@@ -6,7 +6,7 @@ license = "LGPL 2.1"
 description = "High-level rust bindings zo the zbar library"
 repository = "https://github.com/marhkb/zbar-rs.git"
 readme = "README.md"
-keywords = ["bindings", "barcode reader"]
+keywords = ["bindings", "ffi", "image", "library", "multimedia"]
 categories = ["api-bindings", "multimedia", "multimedia::images", "external-ffi-bindings", ]
 maintenance = { status = "experimental" }
 build = "build.rs"
