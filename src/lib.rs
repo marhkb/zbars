@@ -21,7 +21,7 @@ pub use zbar_config_e as ZBarConfig;
 #[cfg(feature = "zbar_fork")]
 pub use zbar_modifier_e as ZBarModifier;
 
-mod image;
+pub mod image;
 mod symbol;
 mod symbolset;
 pub mod imagescanner;
