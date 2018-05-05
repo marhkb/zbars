@@ -60,7 +60,7 @@ impl Symbol {
     pub fn polygon(&self) -> SymbolPolygon { self.into() }
 }
 
-#[cfg(feature = "fork")]
+#[cfg(feature = "zbar_fork")]
 impl Symbol {
     pub fn configs(&self) -> u32 { unsafe { zbar_symbol_get_configs(**self) } }
     pub fn modifiers(&self) -> ZBarModifier {

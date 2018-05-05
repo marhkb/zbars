@@ -22,7 +22,7 @@ impl SymbolSet {
     }
     pub fn iter(&self) -> SymbolIter { self.first_symbol().into() }
 }
-#[cfg(feature = "fork")]
+#[cfg(feature = "zbar_fork")]
 impl SymbolSet {
     pub fn first_symbol_unfiltered(&self) -> Option<Symbol> {
         Symbol::from_raw(unsafe { zbar_symbol_set_first_unfiltered(**self) })

@@ -113,7 +113,7 @@ impl ZbarImage {
     }
 }
 
-#[cfg(feature = "fork")]
+#[cfg(feature = "zbar_fork")]
 impl ZbarImage {
     pub fn size(&self) -> (u32, u32) {
         unsafe {
@@ -187,8 +187,8 @@ pub mod from_image {
 }
 
 #[cfg(test)]
-#[cfg(feature = "fork")]
-mod test {
+#[cfg(feature = "zbar_fork")]
+mod test_zbar_fork {
     use super::*;
 
     #[test]
