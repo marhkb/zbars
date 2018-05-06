@@ -28,3 +28,8 @@ image = "0.19.0"
 [build-dependencies]
 pkg-config = "0.3.11"
 bindgen = "0.36.0"
+
+
+[[example]]
+name = "scan_image"
+path = "examples/imagescanner/scan_image/main.rs"
