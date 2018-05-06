@@ -15,8 +15,8 @@ Examples and documentation will follow in the next weeks.
 [1]: https://img.shields.io/crates/v/zbar-rs.svg?style=flat-square
 [2]: https://crates.io/crates/zbar-rs
 [3]: https://img.shields.io/travis/marhkb/zbar-rs.svg?style=flat-square
-[4]: https://travis-ci.org/markhkb/zbar-rs
+[4]: https://travis-ci.org/marhkb/zbar-rs
 [5]: https://img.shields.io/crates/d/zbar-rs.svg?style=flat-square
 [6]: https://crates.io/crates/zbar-rs
 [7]: https://docs.rs/zbar-rs/badge.svg
-[8]: https://docs.rs/zbar-rs
+[8]: https://docs.rs/crate/zbar-rs
