@@ -1,13 +1,14 @@
-extern crate pkg_config;
+extern crate metadeps;
 extern crate bindgen;
 
-use std::env;
-use std::path::PathBuf;
+use std::{
+    env,
+    path::PathBuf,
+};
 
 fn main() {
 
-    let config = pkg_config::Config::new().atleast_version("0.10").probe("zbar").unwrap();
-    if config.version.parse::<f64>().unwrap() >= 0.2 {
+    if metadeps::probe().unwrap().get("zbar").unwrap().version.parse::<f64>().unwrap() >= 0.2 {
         println!("cargo:rustc-cfg=feature=\"zbar_fork\"");
     }
 

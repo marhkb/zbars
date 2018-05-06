@@ -10,6 +10,7 @@ keywords = ["bindings", "ffi", "image", "library", "multimedia"]
 categories = ["api-bindings", "multimedia", "multimedia::images", "external-ffi-bindings", ]
 maintenance = { status = "experimental" }
 build = "build.rs"
+links = "zbar"
 
 [badges]
 travis-ci = { repository = "marhkb/zbar-rs" }
@@ -25,9 +26,11 @@ image = { version = "0.19.0", optional = true }
 image = "0.19.0"
 
 [build-dependencies]
-pkg-config = "0.3.11"
+metadeps = "1.1.2"
 bindgen = "0.36.0"
 
+[package.metadata.pkg-config]
+zbar = "0.10"
 
 [[example]]
 name = "scan_image"
