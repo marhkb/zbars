@@ -8,6 +8,7 @@ use std::{
     ffi::CStr,
     ops::Deref,
     os::raw::c_void,
+    mem::transmute,
 };
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
@@ -21,21 +22,17 @@ pub use zbar_config_e as ZBarConfig;
 #[cfg(feature = "zbar_fork")]
 pub use zbar_modifier_e as ZBarModifier;
 
+pub mod format;
 pub mod image;
 mod symbol;
 mod symbolset;
 pub mod imagescanner;
 pub mod processor;
+pub mod prelude;
 
 pub type ZBarResult<T> = ::std::result::Result<T, ZBarErrorType>;
 pub type ZBarSimpleResult<T> = ::std::result::Result<T, i32>;
 
-//TODO: other formats
-#[repr(C)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum Format {
-    Y800 = 0x59455247,
-}
 
 #[derive(Debug)]
 pub struct ZBarErrorType(ZBarError);
@@ -119,6 +116,7 @@ mod test {
 
     #[test]
     fn test_symbol_name() {
-        assert_eq!(symbol_name(ZBarSymbolType::ZBAR_QRCODE), "QR-Code")
+        assert_eq!(symbol_name(ZBarSymbolType::ZBAR_QRCODE), "QR-Code");
+        assert_eq!(symbol_name(ZBarSymbolType::ZBAR_CODE128), "CODE-128");
     }
 }

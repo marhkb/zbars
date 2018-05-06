@@ -1,3 +1,4 @@
+use format::*;
 use image::ZBarImage;
 use super::*;
 use symbolset::SymbolSet;
@@ -15,7 +16,7 @@ impl Processor {
         processor.set_config(ZBarSymbolType::ZBAR_NONE, ZBarConfig::ZBAR_CFG_ENABLE, 0);
         processor
     }
-    pub fn builder() -> ProcessorBuilder { ProcessorBuilder::new() }
+    pub fn builder<'a>() -> ProcessorBuilder<'a> { ProcessorBuilder::new() }
 
     pub fn init<T>(&mut self, video_device: T, enable_display: bool) -> ZBarSimpleResult<()> where T: AsRef<str> {
         let result = unsafe {
@@ -42,8 +43,8 @@ impl Processor {
     pub fn request_iomode(&mut self, iomode: i32) -> i32 {
         unsafe { zbar_processor_request_iomode(**self, iomode) }
     }
-    pub fn force_format(&mut self, input_format: Format, output_format: Format) -> i32 {
-        unsafe  { zbar_processor_force_format(**self, input_format as u64, output_format as u64) }
+    pub fn force_format(&mut self, input_format: &Format, output_format: &Format) -> i32 {
+        unsafe  { zbar_processor_force_format(**self, input_format.fourcc(), output_format.fourcc()) }
     }
     pub fn set_userdata(&mut self, userdata: &[u8]) {
         //TODO
@@ -154,15 +155,15 @@ impl Drop for Processor {
     fn drop(&mut self) { unsafe { zbar_processor_destroy(**self) } }
 }
 
-pub struct ProcessorBuilder {
+pub struct ProcessorBuilder<'a> {
     threaded: bool,
     size: Option<(u32, u32)>,
     interface_version: Option<i32>,
     iomode: Option<i32>,
-    format: Option<(Format, Format)>,
+    format: Option<(Format<'a>, Format<'a>)>,
     config: Vec<(ZBarSymbolType, ZBarConfig, i32)>,
 }
-impl ProcessorBuilder {
+impl<'a> ProcessorBuilder<'a> {
     pub fn new() -> Self {
         Self {
             threaded: false,
@@ -179,7 +180,7 @@ impl ProcessorBuilder {
         self.interface_version = interface_version; self
     }
     pub fn with_iomode(&mut self, iomode: Option<i32>) -> &mut Self { self.iomode = iomode; self }
-    pub fn with_format(&mut self, format: Option<(Format, Format)>) -> &mut Self {
+    pub fn with_format(&mut self, format: Option<(Format<'a>, Format<'a>)>) -> &mut Self {
         self.format = format; self
     }
     pub fn with_config(&mut self, symbol_type: ZBarSymbolType, config: ZBarConfig, value: i32) -> &mut Self {
@@ -196,8 +197,8 @@ impl ProcessorBuilder {
         if let Some(iomode) = self.iomode {
             processor.request_iomode(iomode);
         }
-        if let Some(format) = self.format {
-            processor.force_format(format.0, format.1);
+        if let Some(ref format) = self.format {
+            processor.force_format(&format.0, &format.1);
         }
         self.config.iter().for_each(|values| {
             processor.set_config(values.0, values.1, values.2);
