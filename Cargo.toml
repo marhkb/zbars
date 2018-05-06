@@ -16,7 +16,6 @@ travis-ci = { repository = "marhkb/zbar-rs" }
 
 [features]
 default = ["from_image"]
-zbar_fork = [] # There is a fork of zbar that is more activly developed (https://github.com/procxx/zbar)
 from_image = ["image"]
 
 [dependencies]

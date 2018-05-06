@@ -11,10 +11,6 @@ fn main() {
         println!("cargo:rustc-cfg=feature=\"zbar_fork\"");
     }
 
-    // Tell cargo to tell rustc to link the system bzip2
-    // shared library.
-    println!("cargo:rustc-link-lib=zbar");
-
     // The bindgen::Builder is the main entry point
     // to bindgen, and lets you build up options for
     // the resulting bindings.

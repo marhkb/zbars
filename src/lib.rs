@@ -8,7 +8,6 @@ use std::{
     ffi::CStr,
     ops::Deref,
     os::raw::c_void,
-    mem::transmute,
 };
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
