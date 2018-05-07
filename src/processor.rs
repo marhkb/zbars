@@ -222,7 +222,6 @@ mod test {
             .build();
 
         processor.init("/dev/video0", true).unwrap();
-        processor.set_active(true).unwrap();
         processor.set_visible(true).unwrap();
 
         processor.process_one(-1);

@@ -36,3 +36,7 @@ zbar = "0.10"
 [[example]]
 name = "scan_image"
 path = "examples/imagescanner/scan_image/main.rs"
+
+[[example]]
+name = "process_one"
+path = "examples/processor/process_one/main.rs"
