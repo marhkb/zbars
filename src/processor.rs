@@ -138,7 +138,7 @@ impl Processor {
         unsafe { zbar_process_one(**self, timeout) }
     }
     //TODO: special type as return
-    pub fn process_image(&self, image: &ZBarImage) -> i32 {
+    pub fn process_image(&self, image: &mut ZBarImage) -> i32 {
         unsafe { zbar_process_image(**self, **image) }
     }
 }
@@ -250,7 +250,7 @@ mod test {
     #[test]
     #[cfg(feature = "from_image")]
     fn test_scan_image() {
-        let image = ZBarImage::from_path("test/qrcode.png").unwrap();
+        let mut image = ZBarImage::from_path("test/qrcode.png").unwrap();
 
         let processor = Processor::builder()
             .threaded(true)
@@ -258,7 +258,7 @@ mod test {
             .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 1)
             .build();
 
-        processor.process_image(&image);
+        processor.process_image(&mut image);
 
         let symbol = image.first_symbol().unwrap();
 

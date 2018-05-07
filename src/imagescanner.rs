@@ -28,7 +28,7 @@ impl ImageScanner {
     pub fn results(&self) -> Option<SymbolSet> {
         SymbolSet::from_raw(unsafe { zbar_image_scanner_get_results(**self) })
     }
-    pub fn scan_image(&self, image: &ZBarImage) -> ZBarSimpleResult<Option<SymbolSet>> {
+    pub fn scan_image(&self, image: &mut ZBarImage) -> ZBarSimpleResult<Option<SymbolSet>> {
         let result: i32 = unsafe { zbar_scan_image(**self, **image) };
         match result >= 0 {
             true  => Ok(image.symbols()),
@@ -92,12 +92,12 @@ mod test {
 
     #[test]
     fn test_qrcode() {
-        let image = ZBarImage::from_path("test/qrcode.png").unwrap();
+        let mut image = ZBarImage::from_path("test/qrcode.png").unwrap();
 
         let scanner = ImageScannerBuilder::new()
             .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
             .build();
-        scanner.scan_image(&image).unwrap();
+        scanner.scan_image(&mut image).unwrap();
 
         assert_qrcode(image.first_symbol().unwrap());
 
@@ -109,12 +109,12 @@ mod test {
 
     #[test]
     fn test_qrcode_disabled() {
-        let image = ZBarImage::from_path("test/qrcode.png").unwrap();
+        let mut image = ZBarImage::from_path("test/qrcode.png").unwrap();
 
         let scanner = ImageScannerBuilder::new()
             .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 0)
             .build();
-        scanner.scan_image(&image).unwrap();
+        scanner.scan_image(&mut image).unwrap();
 
         assert!(image.first_symbol().is_none());
     }
@@ -127,13 +127,13 @@ mod test {
 
     #[test]
     fn test_code128() {
-        let image = ZBarImage::from_path("test/code128.gif").unwrap();
+        let mut image = ZBarImage::from_path("test/code128.gif").unwrap();
 
         let scanner = ImageScannerBuilder::new()
             .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 1)
             .build();
 
-        scanner.scan_image(&image).unwrap();
+        scanner.scan_image(&mut image).unwrap();
 
         assert_code128(image.first_symbol().unwrap());
 
@@ -145,13 +145,13 @@ mod test {
 
     #[test]
     fn test_code128_disabled() {
-        let image = ZBarImage::from_path("test/code128.gif").unwrap();
+        let mut image = ZBarImage::from_path("test/code128.gif").unwrap();
 
         let scanner = ImageScannerBuilder::new()
             .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 0)
             .build();
 
-        scanner.scan_image(&image).unwrap();
+        scanner.scan_image(&mut image).unwrap();
 
         assert!(image.first_symbol().is_none());
     }
@@ -170,7 +170,7 @@ mod test {
             .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 1)
             .build();
 
-        scanner.scan_image(&image).unwrap();
+        scanner.scan_image(&mut image).unwrap();
 
         scanner.recycle_image(Some(&mut image));
         assert!(image.first_symbol().is_none());
