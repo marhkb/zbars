@@ -9,7 +9,9 @@ use std::{
 fn main() {
 
     if metadeps::probe().unwrap().get("zbar").unwrap().version.parse::<f64>().unwrap() >= 0.2 {
-        println!("cargo:rustc-cfg=feature=\"zbar_fork\"");
+        if cfg!(feature = "zbar_fork_if_available") {
+            println!("cargo:rustc-cfg=feature=\"zbar_fork\"");
+        }
     }
 
     // The bindgen::Builder is the main entry point
