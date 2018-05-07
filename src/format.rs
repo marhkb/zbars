@@ -13,7 +13,7 @@ use std::{
 /// Basic usage:
 ///
 /// ```
-/// use zbar_rs::prelude::Format;
+/// use zbars::prelude::Format;
 /// use std::borrow::Cow;
 ///
 /// // create Format that borrows the given label
@@ -43,7 +43,7 @@ impl<'a> Format<'a> {
     /// Basic usage:
     ///
     /// ```
-    /// use zbar_rs::prelude::Format;
+    /// use zbars::prelude::Format;
     ///
     /// let format = Format::from_fourcc(0x30303859);
     /// println!("{}", format.label());
@@ -68,7 +68,7 @@ impl<'a> Format<'a> {
     /// Basic usage:
     ///
     /// ```
-    /// use zbar_rs::prelude::Format;
+    /// use zbars::prelude::Format;
     /// use std::borrow::Cow;
     ///
     /// // create Format that borrows the given label
