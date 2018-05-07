@@ -13,19 +13,13 @@ pub fn main() {
     let symbol_set = image_scanner.scan_image(&mut image)
         .expect("error on scanning image");
 
-    match symbol_set {
-        Some(symbol_set) => {
-            symbol_set.iter()
-                .for_each(|symbol| {
-                    println!("symbol decoded: {}", symbol.data());
-                    symbol.polygon().iter()
-                        .enumerate()
-                        .for_each(|(i, point)| {
-                            println!("{}. point: {:?}", i, point);
-                        })
+    symbol_set.iter()
+        .for_each(|symbol| {
+            println!("symbol decoded: {}", symbol.data());
+            symbol.polygon().iter()
+                .enumerate()
+                .for_each(|(i, point)| {
+                    println!("{}. point: {:?}", i, point);
                 })
-        }
-        None => println!("no symbols decoded")
-    }
-
+        });
 }
