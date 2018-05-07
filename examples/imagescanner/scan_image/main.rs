@@ -1,6 +1,6 @@
-extern crate zbar_rs;
+extern crate zbars;
 
-use zbar_rs::prelude::*;
+use zbars::prelude::*;
 
 pub fn main() {
     let mut image = ZBarImage::from_path("test/qrcode.png")

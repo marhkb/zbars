@@ -1,4 +1,4 @@
-extern crate zbar_rs;
+extern crate zbars;
 
 #[test]
 fn it_works() {

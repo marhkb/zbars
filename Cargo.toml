@@ -1,5 +1,5 @@
 [package]
-name = "zbar-rs"
+name = "zbars"
 version = "0.2.7-dev"
 authors = ["Marcus Behrendt <marcus.behrendt.86@gmail.com>"]
 license = "LGPL-2.1"

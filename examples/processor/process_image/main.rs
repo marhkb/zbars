@@ -1,10 +1,10 @@
-extern crate zbar_rs;
+extern crate zbars;
 
 use std::{
     thread,
     time::Duration,
 };
-use zbar_rs::prelude::*;
+use zbars::prelude::*;
 
 pub fn main() {
 
