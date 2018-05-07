@@ -40,3 +40,7 @@ path = "examples/imagescanner/scan_image/main.rs"
 [[example]]
 name = "process_one"
 path = "examples/processor/process_one/main.rs"
+
+[[example]]
+name = "process_image"
+path = "examples/processor/process_image/main.rs"

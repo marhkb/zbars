@@ -19,7 +19,6 @@ impl<'a> ZBarImage<'a> {
 
         unsafe {
             let image = zbar_image_create();
-            //TODO: Let user specify format
             zbar_image_set_format(image, format.fourcc());
             zbar_image_set_size(image, width, height);
             zbar_image_set_data(
@@ -39,7 +38,6 @@ impl<'a> ZBarImage<'a> {
     pub fn from_slice(width: u32, height: u32, format: &Format, slice: &'a [u8]) -> Self {
         unsafe {
             let image = zbar_image_create();
-            //TODO: Let user specify format
             zbar_image_set_format(image, format.fourcc());
             zbar_image_set_size(image, width, height);
             zbar_image_set_data(

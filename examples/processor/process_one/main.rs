@@ -11,7 +11,7 @@ pub fn main() {
         .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 1)
         .build();
 
-    // initialize video
+    // initialize video (system dependent!)
     processor.init("/dev/video0", true).unwrap();
 
     // show video
