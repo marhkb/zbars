@@ -1,4 +1,6 @@
 use std::{
+    error::Error,
+    fmt,
     path::Path,
     borrow::Cow,
     marker::PhantomData,
@@ -9,47 +11,65 @@ use format::*;
 use symbol::*;
 use symbolset::*;
 
+pub type ZBarImageResult<'a> = Result<ZBarImage<'a>, ZBarImageError>;
+
+#[derive(Debug)]
+pub enum ZBarImageError {
+    Len(u32, u32, usize),
+}
+impl Error for ZBarImageError {
+    fn description(&self) -> &str { "image error" }
+}
+impl fmt::Display for ZBarImageError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use self::ZBarImageError::*;
+
+        match *self {
+            Len(w, h, l) => write!(f, "Width and height don't match actual data length => width: {}; height: {}; actual data length: {}", w, h, l)
+        }
+    }
+}
+
+
 pub struct ZBarImage<'a> {
     image: *mut zbar_image_s,
     phantom: PhantomData<&'a ()>,
 }
 impl<'a> ZBarImage<'a> {
     unsafe fn from_raw(image: *mut zbar_image_s) -> Self { Self { image, phantom: PhantomData } }
-    pub fn from_buf(width: u32, height: u32, format: &Format, buf: Vec<u8>) -> Self {
-        assert_eq!((width * height) as usize, buf.len());
+    fn new<T>(width: u32,
+              height: u32,
+              format: &Format,
+              data: T,
+              cleanup_handler: Option<unsafe extern "C" fn (image: *mut zbar_image_t)>) -> ZBarImageResult<'a>
 
-        unsafe {
-            let image = zbar_image_create();
-            zbar_image_set_format(image, format.fourcc().into());
-            zbar_image_set_size(image, width, height);
-            zbar_image_set_data(
-                image,
-                buf.as_ptr() as *mut c_void,
-                (buf.len() as u32).into(),
-                Some(zbar_image_free_data)
-            );
-
-            let image = Self::from_raw(image);
-
-            ::std::mem::forget(buf);
-
-            image
+        where T: AsRef<[u8]>
+    {
+        let data = data.as_ref();
+        match width as usize * height as usize == data.len() {
+            true => unsafe {
+                let image = zbar_image_create();
+                zbar_image_set_format(image, format.fourcc().into());
+                zbar_image_set_size(image, width, height);
+                zbar_image_set_data(
+                    image,
+                    data.as_ptr() as *mut c_void,
+                    (data.len() as u32).into(),
+                    cleanup_handler
+                );
+                Ok(Self::from_raw(image))
+            }
+            false => Err(ZBarImageError::Len(width, height, data.len()))
         }
+
     }
-    pub fn from_slice(width: u32, height: u32, format: &Format, slice: &'a [u8]) -> Self {
-        unsafe {
-            let image = zbar_image_create();
-            zbar_image_set_format(image, format.fourcc().into());
-            zbar_image_set_size(image, width, height);
-            zbar_image_set_data(
-                image,
-                slice.as_ptr() as *mut c_void,
-                (slice.len() as u32).into(),
-                None
-            );
-
-            Self::from_raw(image)
-        }
+    pub fn from_owned(width: u32, height: u32, format: &Format, data: Vec<u8>) -> ZBarImageResult<'a> {
+        let image = Self::new(width, height, format, data.as_slice(), Some(zbar_image_free_data))?;
+        ::std::mem::forget(data);
+        Ok(image)
+    }
+    pub fn from_borrowed<T>(width: u32, height: u32, format: &Format, data: &'a T) -> ZBarImageResult<'a> where T: ?Sized + AsRef<[u8]> {
+        Self::new(width, height, format, data, None)
     }
     pub fn image_ref(&mut self) {
         //TODO: Needed?
@@ -186,12 +206,13 @@ pub mod from_image {
         {
             let image = image::imageops::grayscale(&image);
 
-            ZBarImage::from_buf(
+            ZBarImage::from_owned(
                 image.dimensions().0,
                 image.dimensions().1,
                 &Format::from_label(Cow::Borrowed("Y800")),
-                image.pixels().map(|p| u8::from(p.data[0])).collect::<Vec<u8>>()
-            )
+                image.pixels().map(|p| u8::from(p.data[0])).collect::<Vec<u8>>())
+                // Safe to unwrap here
+                .unwrap()
         }
     }
 
@@ -214,14 +235,14 @@ mod test_zbar_fork {
     #[test]
     fn test_size() {
         assert_eq!(
-            ZBarImage::from_buf(2, 3, &Format::from_label(Cow::Borrowed("Y800")),
-                                [0; 2 * 3].to_vec()).size(), (2, 3)
+            ZBarImage::from_owned(2, 3, &Format::from_label(Cow::Borrowed("Y800")),
+                                  [0; 2 * 3].to_vec()).unwrap().size(), (2, 3)
         );
     }
 
     #[test]
     fn test_crop_get_and_set() {
-        let mut image = ZBarImage::from_buf(20, 30, &Format::from_label(Cow::Borrowed("Y800")), [0; 20 * 30].to_vec());
+        let mut image = ZBarImage::from_owned(20, 30, &Format::from_label(Cow::Borrowed("Y800")), [0; 20 * 30].to_vec()).unwrap();
         assert_eq!(image.crop(), (0, 0, 20, 30));
         image.set_crop(5, 5, 10, 10);
         assert_eq!(image.crop(), (5, 5, 10, 10));
@@ -236,7 +257,7 @@ mod test {
     fn test_mem_from_buf() {
         for _ in 0..1000000 {
             let buf = [0; 500 * 500];
-            ZBarImage::from_buf(500, 500, &Format::from_label(Cow::Borrowed("Y800")), buf.to_vec());
+            ZBarImage::from_owned(500, 500, &Format::from_label(Cow::Borrowed("Y800")), buf.to_vec()).unwrap();
         }
     }
 
@@ -244,14 +265,14 @@ mod test {
     fn test_mem_from_slice() {
         for _ in 0..1000000 {
             let buf = [0; 500 * 500];
-            ZBarImage::from_slice(500, 500, &Format::from_label(Cow::Borrowed("Y800")), buf.as_ref());
+            ZBarImage::from_borrowed(500, 500, &Format::from_label(Cow::Borrowed("Y800")), buf.as_ref());
         }
     }
 
     // This should always compile
     fn from_slice() -> ZBarImage<'static> {
         let buf = vec![0; 500 * 500];
-        ZBarImage::from_buf(500, 500, &Format::from_label(Cow::Borrowed("Y800")), buf)
+        ZBarImage::from_owned(500, 500, &Format::from_label(Cow::Borrowed("Y800")), buf).unwrap()
     }
 
 //     If this does not compile everything is fine
@@ -262,7 +283,7 @@ mod test {
 
     #[test]
     fn test_convert() {
-        let image = ZBarImage::from_buf(2, 3, &Format::from_label(Cow::Borrowed("Y800")), [0; 2 * 3].to_vec());
+        let image = ZBarImage::from_owned(2, 3, &Format::from_label(Cow::Borrowed("Y800")), [0; 2 * 3].to_vec()).unwrap();
         let format = Format::from_label(Cow::Borrowed("GREY"));
         assert_eq!(image.convert(&format).format(), format)
     }
@@ -270,7 +291,7 @@ mod test {
     //TODO
 //    #[test]
 //    fn test_convert_resize() {
-//        let image = ZbarImage::new(10, 20, [0; 10 * 20].to_vec());
+//        let image = ZbarImage::new(10, 20, [0; 10 * 20].to_vec()).unwrap();
 //        let (format, width, height) = (Format::Y800, 20, 40);
 //        let converted = image.convert_resize(format, width, height);
 //        assert_eq!(converted.format(), format);
@@ -280,12 +301,12 @@ mod test {
     #[test]
     fn format() {
         let format = Format::from_label(Cow::Borrowed("Y800"));
-        assert_eq!(ZBarImage::from_buf(2, 3, &format, [0; 2 * 3].to_vec()).format(), format);
+        assert_eq!(ZBarImage::from_owned(2, 3, &format, [0; 2 * 3].to_vec()).unwrap().format(), format);
     }
 
     #[test]
     fn test_sequence_set_and_get() {
-        let mut image = ZBarImage::from_buf(2, 3, &Format::from_label(Cow::Borrowed("Y800")), [0; 2 * 3].to_vec());
+        let mut image = ZBarImage::from_owned(2, 3, &Format::from_label(Cow::Borrowed("Y800")), [0; 2 * 3].to_vec()).unwrap();
         assert_eq!(image.sequence(), 0);
         image.set_sequence(1);
         assert_eq!(image.sequence(), 1);
@@ -296,7 +317,7 @@ mod test {
     #[test]
     fn test_width() {
         assert_eq!(
-            ZBarImage::from_buf(2, 3, &Format::from_label(Cow::Borrowed("Y800")), [0; 2 * 3].to_vec()).width(),
+            ZBarImage::from_owned(2, 3, &Format::from_label(Cow::Borrowed("Y800")), [0; 2 * 3].to_vec()).unwrap().width(),
             2
         );
     }
@@ -304,7 +325,7 @@ mod test {
     #[test]
     fn test_height() {
         assert_eq!(
-            ZBarImage::from_buf(2, 3, &Format::from_label(Cow::Borrowed("Y800")), [0; 2 * 3].to_vec()).height(),
+            ZBarImage::from_owned(2, 3, &Format::from_label(Cow::Borrowed("Y800")), [0; 2 * 3].to_vec()).unwrap().height(),
             3
         );
     }
@@ -312,13 +333,13 @@ mod test {
     #[test]
     fn test_data() {
         let buf = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].to_vec();
-        let image = ZBarImage::from_buf(3, 4, &Format::from_label(Cow::Borrowed("Y800")), buf.clone());
+        let image = ZBarImage::from_owned(3, 4, &Format::from_label(Cow::Borrowed("Y800")), buf.clone()).unwrap();
         assert_eq!(buf.as_slice(), image.data());
     }
 
     #[test]
     fn test_symbols_get_and_set() {
-        let mut image = ZBarImage::from_buf(20, 30, &Format::from_label(Cow::Borrowed("Y800")), [0; 20 * 30].to_vec());
+        let mut image = ZBarImage::from_owned(20, 30, &Format::from_label(Cow::Borrowed("Y800")), [0; 20 * 30].to_vec()).unwrap();
         assert!(image.symbols().is_none());
         image.set_symbols(None);
         assert!(image.symbols().is_none());
@@ -327,21 +348,21 @@ mod test {
     #[test]
     fn test_first_symbol() {
         assert!(
-            ZBarImage::from_buf(20, 30, &Format::from_label(Cow::Borrowed("Y800")), [0; 20 * 30].to_vec()).first_symbol().is_none()
+            ZBarImage::from_owned(20, 30, &Format::from_label(Cow::Borrowed("Y800")), [0; 20 * 30].to_vec()).unwrap().first_symbol().is_none()
         );
     }
 
     #[test]
     fn test_write() {
         let path = std::env::temp_dir().join("zbar_image");
-        let image = ZBarImage::from_buf(2, 3, &Format::from_label(Cow::Borrowed("Y800")), [0; 2 * 3].to_vec());
+        let image = ZBarImage::from_owned(2, 3, &Format::from_label(Cow::Borrowed("Y800")), [0; 2 * 3].to_vec()).unwrap();
         assert!(image.write(&path).is_ok());
     }
 
     #[test]
     fn test_write_fail() {
         let path = Path::new("/nowhere/nothing");
-        let image = ZBarImage::from_buf(2, 3, &Format::from_label(Cow::Borrowed("Y800")), [0; 2 * 3].to_vec());
+        let image = ZBarImage::from_owned(2, 3, &Format::from_label(Cow::Borrowed("Y800")), [0; 2 * 3].to_vec()).unwrap();
         assert!(image.write(&path).is_err());
     }
 }
