@@ -13,7 +13,7 @@ build = "build.rs"
 links = "zbar"
 
 [badges]
-travis-ci = { repository = "marhkb/zbar-rs" }
+travis-ci = { repository = "marhkb/zbars" }
 
 [features]
 default = ["from_image", "zbar_fork_if_available"]
