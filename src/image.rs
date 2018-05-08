@@ -1,6 +1,7 @@
 use std::{
     path::Path,
     borrow::Cow,
+    marker::PhantomData,
     slice::from_raw_parts,
 };
 use super::*;
@@ -10,10 +11,10 @@ use symbolset::*;
 
 pub struct ZBarImage<'a> {
     image: *mut zbar_image_s,
-    buf: Option<&'a [u8]>,
+    phantom: PhantomData<&'a ()>,
 }
 impl<'a> ZBarImage<'a> {
-    unsafe fn from_raw(image: *mut zbar_image_s, buf: Option<&'a [u8]>) -> Self { Self { image, buf } }
+    unsafe fn from_raw(image: *mut zbar_image_s) -> Self { Self { image, phantom: PhantomData } }
     pub fn from_buf(width: u32, height: u32, format: &Format, buf: Vec<u8>) -> Self {
         assert_eq!((width * height) as usize, buf.len());
 
@@ -28,7 +29,7 @@ impl<'a> ZBarImage<'a> {
                 Some(zbar_image_free_data)
             );
 
-            let image = Self::from_raw(image, None);
+            let image = Self::from_raw(image);
 
             ::std::mem::forget(buf);
 
@@ -47,7 +48,7 @@ impl<'a> ZBarImage<'a> {
                 None
             );
 
-            Self::from_raw(image, Some(slice))
+            Self::from_raw(image)
         }
     }
     pub fn image_ref(&mut self) {
@@ -55,7 +56,7 @@ impl<'a> ZBarImage<'a> {
         unimplemented!("TBD")
     }
     pub fn convert(&self, format: &Format) -> Self {
-        unsafe { Self::from_raw(zbar_image_convert(**self, format.fourcc().into()), None) }
+        unsafe { Self::from_raw(zbar_image_convert(**self, format.fourcc().into())) }
     }
     pub fn convert_resize(&self, _format: Format, _width: u32, _height: u32) -> Self {
         //TODO: exits with SIGSEGV
@@ -247,10 +248,16 @@ mod test {
         }
     }
 
-    // If this does not compile everything is fine
-//    fn from_slice() -> ZBarImage<'static> {
+    // This should always compile
+    fn from_slice() -> ZBarImage<'static> {
+        let buf = vec![0; 500 * 500];
+        ZBarImage::from_buf(500, 500, &Format::from_label(Cow::Borrowed("Y800")), buf)
+    }
+
+//     If this does not compile everything is fine
+//    fn from_slice<'a>() -> ZBarImage<'a> {
 //        let buf = [0; 500 * 500];
-//        ZBarImage::from_slice(500, 500, buf.as_ref())
+//        ZBarImage::from_slice(500, 500, &Format::from_label(Cow::Borrowed("Y800")), buf.as_ref())
 //    }
 
     #[test]
