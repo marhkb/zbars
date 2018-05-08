@@ -43,5 +43,5 @@ fn link() -> String {
             println!("cargo:rustc-cfg=feature=\"zbar_fork\"");
         }
     }
-    "zbar.h".into()
+    "wrapper.h".into()
 }
