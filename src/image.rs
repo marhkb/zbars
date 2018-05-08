@@ -19,12 +19,12 @@ impl<'a> ZBarImage<'a> {
 
         unsafe {
             let image = zbar_image_create();
-            zbar_image_set_format(image, format.fourcc());
+            zbar_image_set_format(image, format.fourcc().into());
             zbar_image_set_size(image, width, height);
             zbar_image_set_data(
                 image,
                 buf.as_ptr() as *mut c_void,
-                buf.len() as u64,
+                (buf.len() as u32).into(),
                 Some(zbar_image_free_data)
             );
 
@@ -43,7 +43,7 @@ impl<'a> ZBarImage<'a> {
             zbar_image_set_data(
                 image,
                 slice.as_ptr() as *mut c_void,
-                slice.len() as u64,
+                (slice.len() as u32).into(),
                 None
             );
 

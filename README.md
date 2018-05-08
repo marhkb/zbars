@@ -12,6 +12,17 @@ And expect things to break!
 
 You need zbar native library in order to build zbars.
 
+On Linux you can simply install zbar development package.
+
+On Windows x64 you can build zbar from https://github.com/dani4/ZBarWin64
+and set define 2 environment variables
+1. ZBAR_PROJ_DIR => the root directory of the project
+2. ZBAR_BUILD_DIR => where the output files from the build are put into
+
+You also need to compile libiconv or download libiconv.dll.
+In order to run you either need to copy libzbar-64-0.dll from output directory
+and libiconv.dll to your working directory
+
 Examples and documentation will follow in the next weeks.
 
 [1]: https://img.shields.io/crates/v/zbars.svg?style=flat-square

@@ -31,7 +31,7 @@ use std::{
 #[derive(Debug)]
 pub struct Format<'a> {
     /// FOURCC value
-    fourcc: u64,
+    fourcc: u32,
     /// FOURCC label (e.g. Y800)
     label: Cow<'a, str>,
 }
@@ -50,7 +50,7 @@ impl<'a> Format<'a> {
     /// println!("{}", format.fourcc());
     ///
     /// ```
-    pub fn from_fourcc(fourcc: u64) -> Self  {
+    pub fn from_fourcc(fourcc: u32) -> Self  {
         use std::str::from_utf8;
 
         Format {
@@ -87,13 +87,13 @@ impl<'a> Format<'a> {
                 // pad 4
                 let label_format = format!("{:4}", label.as_ref());
                 let bytes = label_format.as_bytes();
-                unsafe { transmute::<[u8; 4], u32>([bytes[0], bytes[1], bytes[2], bytes[3]]) as u64 }
+                unsafe { transmute::<[u8; 4], u32>([bytes[0], bytes[1], bytes[2], bytes[3]]) }
             },
             label,
         }
     }
     /// Returns the FOURCC value for this `Format`
-    pub fn fourcc(&self) -> u64 { self.fourcc }
+    pub fn fourcc(&self) -> u32 { self.fourcc }
     /// Returns the FOURCC label for this `Format`
     pub fn label(&'a self) -> &'a str {
         match self.label {
