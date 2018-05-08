@@ -39,7 +39,7 @@ following environment variables in order to build:
 ```
 
 In order to run you also need to compile [libiconv](https://www.gnu.org/software/libiconv/) or download `libiconv.dll` from somewhere.
-Both `libzbar-64-0.dll` from output directory and `libiconv.dll` have to be copied to the directory where
+Both `libzbar64-0.dll` from output directory and `libiconv.dll` have to be copied to the directory where
 your binary is.
 
 # Usage
