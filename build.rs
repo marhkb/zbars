@@ -1,18 +1,14 @@
-extern crate metadeps;
+#[cfg(unix)]
+extern crate pkg_config;
 extern crate bindgen;
 
 use std::{
     env,
     path::PathBuf,
+    borrow::Cow,
 };
 
 fn main() {
-
-    if metadeps::probe().unwrap().get("zbar").unwrap().version.parse::<f64>().unwrap() >= 0.2 {
-        if cfg!(feature = "zbar_fork_if_available") {
-            println!("cargo:rustc-cfg=feature=\"zbar_fork\"");
-        }
-    }
 
     // The bindgen::Builder is the main entry point
     // to bindgen, and lets you build up options for
@@ -20,7 +16,7 @@ fn main() {
     let bindings = bindgen::Builder::default()
         // The input header we would like to generate
         // bindings for.
-        .header("wrapper.h")
+        .header(link())
         .rustified_enum(".*")
         // Finish the builder and generate the bindings.
         .generate()
@@ -32,4 +28,21 @@ fn main() {
     bindings
         .write_to_file(out_path.join("bindings.rs"))
         .expect("Couldn't write bindings!");
+}
+
+#[cfg(windows)]
+fn link() -> Cow<'static, str> {
+    println!("cargo:rustc-link-search={}", env!("ZBAR_LIB_DIR"));
+    println!("cargo:rustc-link-lib=libzbar64-0");
+    Cow::Owned(format!("{}", PathBuf::from(env!("ZBAR_INCLUDE_DIR")).join("zbar.h").to_str().unwrap()))
+}
+
+#[cfg(unix)]
+fn link() -> Cow<'static, str> {
+    if pkg_config::Config::new().atleast_version("0.10").probe("zbar").unwrap().version.parse::<f64>().unwrap() >= 0.2 {
+        if cfg!(feature = "zbar_fork_if_available") {
+            println!("cargo:rustc-cfg=feature=\"zbar_fork\"");
+        }
+    }
+    Cow::Borrowed("wrapper.h")
 }

@@ -19,12 +19,12 @@ impl<'a> ZBarImage<'a> {
 
         unsafe {
             let image = zbar_image_create();
-            zbar_image_set_format(image, format.fourcc());
+            zbar_image_set_format(image, format.fourcc().into());
             zbar_image_set_size(image, width, height);
             zbar_image_set_data(
                 image,
                 buf.as_ptr() as *mut c_void,
-                buf.len() as u64,
+                (buf.len() as u32).into(),
                 Some(zbar_image_free_data)
             );
 
@@ -38,12 +38,12 @@ impl<'a> ZBarImage<'a> {
     pub fn from_slice(width: u32, height: u32, format: &Format, slice: &'a [u8]) -> Self {
         unsafe {
             let image = zbar_image_create();
-            zbar_image_set_format(image, format.fourcc());
+            zbar_image_set_format(image, format.fourcc().into());
             zbar_image_set_size(image, width, height);
             zbar_image_set_data(
                 image,
                 slice.as_ptr() as *mut c_void,
-                slice.len() as u64,
+                (slice.len() as u32).into(),
                 None
             );
 
@@ -55,7 +55,7 @@ impl<'a> ZBarImage<'a> {
         unimplemented!("TBD")
     }
     pub fn convert(&self, format: &Format) -> Self {
-        unsafe { Self::from_raw(zbar_image_convert(**self, format.fourcc()), None) }
+        unsafe { Self::from_raw(zbar_image_convert(**self, format.fourcc().into()), None) }
     }
     pub fn convert_resize(&self, _format: Format, _width: u32, _height: u32) -> Self {
         //TODO: exits with SIGSEGV
@@ -65,7 +65,7 @@ impl<'a> ZBarImage<'a> {
 //        }
     }
     pub fn format(&self) -> Format {
-        unsafe { Format::from_fourcc(zbar_image_get_format(**self)) }
+        unsafe { Format::from_fourcc(zbar_image_get_format(**self) as u32) }
     }
     pub fn sequence(&self) -> u32 { unsafe { zbar_image_get_sequence(**self) } }
     pub fn width(&self) -> u32 { unsafe { zbar_image_get_width(**self) } }

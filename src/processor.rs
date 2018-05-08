@@ -44,7 +44,7 @@ impl Processor {
         unsafe { zbar_processor_request_iomode(**self, iomode) }
     }
     pub fn force_format(&mut self, input_format: &Format, output_format: &Format) -> i32 {
-        unsafe  { zbar_processor_force_format(**self, input_format.fourcc(), output_format.fourcc()) }
+        unsafe  { zbar_processor_force_format(**self, input_format.fourcc().into(), output_format.fourcc().into()) }
     }
     pub fn set_userdata(&mut self, userdata: &[u8]) {
         //TODO

@@ -1,6 +1,6 @@
 [package]
 name = "zbars"
-version = "0.1.2-dev"
+version = "0.2.0"
 authors = ["Marcus Behrendt <marcus.behrendt.86@gmail.com>"]
 license = "LGPL-2.1"
 description = "High-level rust bindings zo the zbar library"
@@ -27,11 +27,10 @@ image = { version = "0.19.0", optional = true }
 image = "0.19.0"
 
 [build-dependencies]
-metadeps = "1.1.2"
 bindgen = "0.36.0"
 
-[package.metadata.pkg-config]
-zbar = "0.10"
+[target.'cfg(unix)'.build-dependencies]
+pkg-config = "0.3.11"
 
 [[example]]
 name = "scan_image"
