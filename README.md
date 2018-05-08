@@ -30,16 +30,17 @@ zbar `0.2` which is a more recent fork (https://github.com/procxx/zbar) if found
 Nothing special to consider when running your binary on Linux.
 
 ## Windows
-Building on Windows is a little bit awkward. I only tested it on x64 with MSVC toolchain.  
-You can build [ZBar Visual Studio project](https://github.com/dani4/ZBarWin64) and set
-following environment variables in order to build:
-```
-1. ZBAR_PROJ_DIR="project directory"
-2. ZBAR_BUILD_DIR="build output directory"
-```
+Building on Windows is a little bit uncomfortable. I only tested it on x64 with MSVC toolchain.  
+At first you must download this [ZBar Visual Studio project](https://github.com/dani4/ZBarWin64).  
+You can either build the project or just use the prebuilt binaries in the project's `lib` directory.
+Then set the following environment variables to be able to build:
+    
+    ZBAR_LIB_DIR="build output directory or directory where prebuilds are stored"
+    ZBAR_INCLUDE_DIR="directory where zbar.h is stored (usually named include)"
+    
 
-In order to run you also need to compile [libiconv](https://www.gnu.org/software/libiconv/) or download `libiconv.dll` from somewhere.
-Both `libzbar64-0.dll` from output directory and `libiconv.dll` have to be copied to the directory where
+In order to run you also need to compile [libiconv](https://www.gnu.org/software/libiconv/) or download `libiconv.dll` from somewhere else.
+Both `libzbar64-0.dll` from lib directory and `libiconv.dll` have to be copied to the directory where
 your binary is.
 
 # Usage

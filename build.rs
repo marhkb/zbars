@@ -5,6 +5,7 @@ extern crate bindgen;
 use std::{
     env,
     path::PathBuf,
+    borrow::Cow,
 };
 
 fn main() {
@@ -30,18 +31,18 @@ fn main() {
 }
 
 #[cfg(windows)]
-fn link() -> String {
-    println!("{}", format!("cargo:rustc-link-search={}", env!("ZBAR_BUILD_DIR")));
+fn link() -> Cow<'static, str> {
+    println!("cargo:rustc-link-search={}", env!("ZBAR_LIB_DIR"));
     println!("cargo:rustc-link-lib=libzbar64-0");
-    format!("{}{}", env!("ZBAR_PROJ_DIR"), r"\include\zbar.h")
+    Cow::Owned(format!("{}", PathBuf::from(env!("ZBAR_INCLUDE_DIR")).join("zbar.h").to_str().unwrap()))
 }
 
 #[cfg(unix)]
-fn link() -> String {
+fn link() -> Cow<'static, str> {
     if pkg_config::Config::new().atleast_version("0.10").probe("zbar").unwrap().version.parse::<f64>().unwrap() >= 0.2 {
         if cfg!(feature = "zbar_fork_if_available") {
             println!("cargo:rustc-cfg=feature=\"zbar_fork\"");
         }
     }
-    "wrapper.h".into()
+    Cow::Borrowed("wrapper.h")
 }
