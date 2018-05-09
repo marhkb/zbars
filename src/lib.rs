@@ -2,6 +2,10 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
+#[cfg(feature = "from_image")]
+#[macro_use]
+extern crate lazy_static;
+
 use std::{
     error::Error,
     fmt,

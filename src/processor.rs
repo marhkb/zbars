@@ -261,8 +261,6 @@ mod test {
     fn test_userdata_set_and_get() {
         let mut userdata = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
 
-        let data = vec![0; 20 * 30];
-
         let mut processor1 = Processor::builder().build().unwrap();
         let mut processor2 = Processor::builder().build().unwrap();
         let mut processor3 = Processor::builder().build().unwrap();

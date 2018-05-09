@@ -81,8 +81,6 @@ impl<'a> Format<'a> {
     /// println!("{}", format.fourcc());
     /// ```
     pub fn from_label(label: Cow<'a, str>) -> Self {
-        use std::borrow::Borrow;
-
         Format {
             fourcc: {
                 let byte_slice = label.as_ref().as_bytes();

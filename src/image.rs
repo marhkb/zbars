@@ -238,31 +238,122 @@ impl<'a> Drop for ZBarImage<'a> {
 
 #[cfg(feature = "from_image")]
 pub mod from_image {
+
     extern crate image;
 
     use self::image::{
         GenericImage,
+        DynamicImage,
         ImageResult,
         Pixel,
     };
     use super::*;
 
+    lazy_static!(static ref FORMAT: Format<'static> = Format::from_label(Cow::Borrowed("Y800")););
+
     impl<'a> ZBarImage<'a> {
+        /// Creates a `ZBarImage` from the given path.
+        ///
+        /// This method invokes `ZBarImage::from_dyn_image`. So if the image is already a Luma8
+        /// no additional memory will be allocated.
+        ///
+        /// # Examples
+        ///
+        /// ```
+        /// extern crate zbars;
+        ///
+        /// use zbars::image::{
+        ///     ZBarImage,
+        ///     from_image::*
+        /// };
+        ///
+        /// fn main() {
+        ///     let image = ZBarImage::from_path("test/code128.gif").unwrap();
+        /// }
+        ///
         pub fn from_path<P>(path: P) -> ImageResult<Self> where P: AsRef<Path> {
-            image::open(&path).map(Self::from_image)
+            image::open(&path).map(Self::from_dyn_image)
         }
 
-        pub fn from_image<I>(image: I) -> Self
-            where I: GenericImage + 'static,
-                  u8: From<<<I as GenericImage>::Pixel as Pixel>::Subpixel>,
-        {
-            let image = image::imageops::grayscale(&image);
-
+        /// Creates a `ZBarImage` from a `DynamicImage`.
+        ///
+        /// The given image will owned so zero copy takes place if the image is already a
+        /// `DynamicImage::ImageLuma8`. If it is something other than Luma8 a new buffer will be
+        /// allocated in order to grayscale the image.
+        ///
+        /// # Examples
+        ///
+        /// ```
+        /// extern crate zbars;
+        /// extern crate image;
+        ///
+        /// use zbars::image::{
+        ///     ZBarImage,
+        ///     from_image::*
+        /// };
+        /// use self::image::{DynamicImage, ImageBuffer};
+        ///
+        /// fn main() {
+        ///     let image = ZBarImage::from_dyn_image(
+        ///         DynamicImage::ImageLuma8(
+        ///             // small buffer just for demonstration
+        ///             ImageBuffer::from_vec(1, 1, vec![0]).unwrap()
+        ///         )
+        ///     );
+        /// }
+        /// ```
+        ///
+        pub fn from_dyn_image(image: DynamicImage) -> Self {
             ZBarImage::from_owned(
                 image.dimensions().0,
                 image.dimensions().1,
-                &Format::from_label(Cow::Borrowed("Y800")),
-                image.pixels().map(|p| u8::from(p.data[0])).collect::<Vec<u8>>())
+                &FORMAT,
+                match image {
+                    DynamicImage::ImageLuma8(image) => image.into_raw(),
+                    other                           => other.to_luma().into_raw(),
+                })
+                // Safe to unwrap here
+                .unwrap()
+        }
+
+        /// Creates a `ZBarImage` from a `GenericImage`.
+        ///
+        /// As the pixel representation is not known for a `GenericImage` it will always
+        /// be grayscaled and thus a new image buffer will be allocated. If possible use
+        /// `ZBarImage::from_dyn_image` instead. Use this if you want to use `GenericImage`
+        /// beyond this.
+        ///
+        /// # Examples
+        ///
+        /// ```
+        /// extern crate zbars;
+        /// extern crate image;
+        ///
+        /// use zbars::image::{
+        ///     ZBarImage,
+        ///     from_image::*
+        /// };
+        /// use self::image::{DynamicImage, ImageBuffer};
+        ///
+        /// fn main() {
+        ///     let image = ZBarImage::from_generic_image(
+        ///         &DynamicImage::ImageRgb8(
+        ///             // small buffer just for demonstration
+        ///             ImageBuffer::from_vec(1, 1, vec![0, 0, 0]).unwrap()
+        ///         )
+        ///     );
+        /// }
+        /// ```
+        ///
+        pub fn from_generic_image<I>(image: &I) -> Self
+            where I: GenericImage + 'static,
+                  Vec<u8>: From<Vec<<<I as GenericImage>::Pixel as Pixel>::Subpixel>>
+        {
+            ZBarImage::from_owned(
+                image.dimensions().0,
+                image.dimensions().1,
+                &FORMAT,
+                image::imageops::grayscale(image).into_raw().into())
                 // Safe to unwrap here
                 .unwrap()
         }
@@ -273,7 +364,56 @@ pub mod from_image {
         use super::*;
 
         #[test]
-        fn test() { assert!(ZBarImage::from_path("test/code128.gif").is_ok()); }
+        fn test_from_path() { assert!(ZBarImage::from_path("test/code128.gif").is_ok()); }
+
+        #[test]
+        fn test_from_dyn_image() {
+            assert!(ZBarImage::from_path("test/code128.gif").is_ok());
+        }
+
+        #[test]
+        fn test_from_dyn_image_luma() {
+            use self::image::ImageBuffer;
+
+            let data = vec![0, 0, 0];
+            let image = ZBarImage::from_dyn_image(
+                DynamicImage::ImageLuma8(ImageBuffer::from_vec(1, 3, data).unwrap())
+            );
+            assert_eq!(image.data(), &[0, 0, 0]);
+        }
+
+        #[test]
+        fn test_from_dyn_image_rgb() {
+            use self::image::ImageBuffer;
+
+            let data = vec![0, 0, 0];
+            let image = ZBarImage::from_dyn_image(
+                DynamicImage::ImageRgb8(ImageBuffer::from_vec(1, 1, data).unwrap())
+            );
+            assert_eq!(image.data(), &[0]);
+        }
+
+        #[test]
+        fn test_from_generic_image_luma() {
+            use self::image::ImageBuffer;
+
+            let data = vec![0, 0, 0];
+            let image = ZBarImage::from_generic_image(
+                &DynamicImage::ImageLuma8(ImageBuffer::from_vec(1, 3, data).unwrap())
+            );
+            assert_eq!(image.data(), &[0, 0, 0]);
+        }
+
+        #[test]
+        fn test_from_generic_image_rgb() {
+            use self::image::ImageBuffer;
+
+            let data = vec![0, 0, 0];
+            let image = ZBarImage::from_generic_image(
+                &DynamicImage::ImageRgb8(ImageBuffer::from_vec(1, 1, data).unwrap())
+            );
+            assert_eq!(image.data(), &[0]);
+        }
     }
 }
 
@@ -391,7 +531,7 @@ mod test {
 
     #[test]
     fn test_data() {
-        let buf = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].to_vec();
+        let buf = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
         let image = ZBarImage::from_owned(
             3, 4, &Format::from_label(Cow::Borrowed("Y800")), buf.clone()
         ).unwrap();
