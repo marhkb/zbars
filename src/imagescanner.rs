@@ -44,7 +44,8 @@ impl Default for ImageScanner {
         let mut scanner = ImageScanner {
             scanner: unsafe { zbar_image_scanner_create() }
         };
-        scanner.set_config(ZBarSymbolType::ZBAR_NONE, ZBarConfig::ZBAR_CFG_ENABLE, 0);
+        // Think it is safe to unwrap here
+        scanner.set_config(ZBarSymbolType::ZBAR_NONE, ZBarConfig::ZBAR_CFG_ENABLE, 0).unwrap();
         scanner
     }
 }
