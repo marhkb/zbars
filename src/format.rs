@@ -55,10 +55,9 @@ impl<'a> Format<'a> {
 
         Format {
             fourcc,
-            label: {
-                let bytes = unsafe { transmute::<u32, [u8; 4]>(fourcc as u32) };
-                Cow::Owned(from_utf8(&bytes).unwrap().to_owned())
-            },
+            label: Cow::Owned(
+                from_utf8(&unsafe { transmute::<_, [u8; 4]>(fourcc) }).unwrap().to_owned()
+            ),
         }
     }
     /// Creates a `Format` from the given FOURCC label and lets `Format` borrow that label.
@@ -82,12 +81,16 @@ impl<'a> Format<'a> {
     /// println!("{}", format.fourcc());
     /// ```
     pub fn from_label(label: Cow<'a, str>) -> Self {
+        use std::borrow::Borrow;
+
         Format {
             fourcc: {
-                // pad 4
-                let label_format = format!("{:4}", label.as_ref());
-                let bytes = label_format.as_bytes();
-                unsafe { transmute::<[u8; 4], u32>([bytes[0], bytes[1], bytes[2], bytes[3]]) }
+                let byte_slice = label.as_ref().as_bytes();
+                let mut bytes = [32; 4];
+                for i in 0..byte_slice.len() {
+                    bytes[i] = byte_slice[i];
+                }
+                unsafe { transmute(bytes) }
             },
             label,
         }
@@ -105,4 +108,16 @@ impl<'a> Format<'a> {
 }
 impl<'a> PartialEq for Format<'a> {
     fn eq(&self, other: &Self) -> bool { self.fourcc == other.fourcc }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_from_fourcc() {
+        assert_eq!(Format::from_label(Cow::Borrowed("YUNV")).fourcc(), 0x564E5559);
+        assert_eq!(Format::from_label(Cow::Borrowed("Y8")).fourcc(), 0x20203859);
+
+    }
 }

@@ -4,8 +4,8 @@
 [![crates.io version][1]][2] [![build status][3]][4]
 [![downloads][5]][6] [![docs.rs docs][7]][8]
 
-# High-level rust bindings zo the zbar library
-Just started implementing a high-level rust binding to zbar barcode scanner library.  
+# High-level rust bindings to the zbar library
+Just started implementing a high-level rust binding to zbar barcode scanner library.
 Some things already work, but there is still a lot to do. So don't expect this to work without flaws.
 And expect things to break!
 
@@ -13,11 +13,11 @@ And expect things to break!
 You need `zbar native library` in order to build `zbars`.
 
 ## Linux
-On Linux you can simply install zbar development package. The build script uses 
+On Linux you can simply install zbar development package. The build script uses
 `pkg-config` to probe for zbar native library.
 
 ### Ubuntu:
-  
+
     # apt install libzbar-dev
 
 ### Arch Linux
@@ -30,14 +30,14 @@ zbar `0.2` which is a more recent fork (https://github.com/procxx/zbar) if found
 Nothing special to consider when running your binary on Linux.
 
 ## Windows
-Building on Windows is a little bit uncomfortable. I only tested it on x64 with MSVC toolchain.  
-At first you must download this [ZBar Visual Studio project](https://github.com/dani4/ZBarWin64).  
+Building on Windows is a little bit uncomfortable. I only tested it on x64 with MSVC toolchain.
+At first you must download this [ZBar Visual Studio project](https://github.com/dani4/ZBarWin64).
 You can either build the project or just use the prebuilt binaries in the project's `lib` directory.
 Then set the following environment variables to be able to build:
-    
+
     ZBAR_LIB_DIR="build output directory or directory where prebuilds are stored"
     ZBAR_INCLUDE_DIR="directory where zbar.h is stored (usually named include)"
-    
+
 
 In order to run you also need to compile [libiconv](https://www.gnu.org/software/libiconv/) or download `libiconv.dll` from somewhere else.
 Both `libzbar64-0.dll` from lib directory and `libiconv.dll` have to be copied to the directory where
