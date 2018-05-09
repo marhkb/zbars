@@ -98,24 +98,14 @@ impl<'a> ZBarImage<'a> {
     /// }
     /// ```
     ///
-    pub fn from_borrowed<T>(width: u32, height: u32, format: &Format, data: &'a T) -> ZBarImageResult<'a>
-        where T: ?Sized + AsRef<[u8]>
+    pub fn from_borrowed<T>(width: u32, height: u32, format: &Format, data: T) -> ZBarImageResult<'a>
+        where T: AsRef<[u8]> + 'a
     {
         Self::new(width, height, format, data, None)
     }
     pub fn image_ref(&mut self) {
         //TODO: Needed?
         unimplemented!("TBD")
-    }
-    pub fn convert(&self, format: &Format) -> Self {
-        unsafe { Self::from_raw(zbar_image_convert(**self, format.fourcc().into())) }
-    }
-    pub fn convert_resize(&self, _format: Format, _width: u32, _height: u32) -> Self {
-        //TODO: exits with SIGSEGV
-        unimplemented!("TBD: exits with SIGSEGV")
-//        unsafe {
-//            Self::from_raw(zbar_image_convert_resize(**self, format as u64, width, height), None)
-//        }
     }
     pub fn format(&self) -> Format {
         unsafe { Format::from_fourcc(zbar_image_get_format(**self) as u32) }
@@ -358,11 +348,6 @@ pub mod from_image {
         fn test_from_path() { assert!(ZBarImage::from_path("test/code128.gif").is_ok()); }
 
         #[test]
-        fn test_from_dyn_image() {
-            assert!(ZBarImage::from_path("test/code128.gif").is_ok());
-        }
-
-        #[test]
         fn test_from_dyn_image_luma() {
             use self::image::ImageBuffer;
 
@@ -434,49 +419,57 @@ mod test_zbar_fork {
     }
 }
 
+#[cfg(target_os = "linux")]
 #[cfg(test)]
-mod test {
+mod test_mem {
+
+    extern crate procinfo;
+
     use super::*;
 
-//    #[test]
+    const N: usize = 100000;
+
+    #[test]
     fn test_mem_from_buf() {
-        for _ in 0..1000000 {
+        let mem_before = mem();
+        for _ in 0..N {
             let buf = [0; 500 * 500];
             ZBarImage::from_owned(
                 500, 500, &Format::from_label(Cow::Borrowed("Y800")), buf.to_vec()
             ).unwrap();
         }
-    }
-
-//    #[test]
-    fn test_mem_from_slice() {
-        for _ in 0..1000000 {
-            let buf = [0; 500 * 500];
-            ZBarImage::from_borrowed(
-                500, 500, &Format::from_label(Cow::Borrowed("Y800")), buf.as_ref()
-            );
-        }
+        assert_mem(mem_before, N);
     }
 
     #[test]
-    fn test_convert() {
-        let image = ZBarImage::from_owned(
-            2, 3, &Format::from_label(Cow::Borrowed("Y800")), [0; 2 * 3].to_vec()
-        ).unwrap();
-        let format = Format::from_label(Cow::Borrowed("GREY"));
-        assert_eq!(image.convert(&format).format(), format)
+    fn test_mem_from_slice() {
+        let mem_before = mem();
+        for _ in 0..N {
+            let buf = [0; 500 * 500];
+            ZBarImage::from_borrowed(
+                500, 500, &Format::from_label(Cow::Borrowed("Y800")), buf.as_ref()
+            ).unwrap();
+        }
+        assert_mem(mem_before, N);
     }
 
-    //TODO
-//    #[test]
-//    fn test_convert_resize() {
-//        let image = ZbarImage::new(10, 20, [0; 10 * 20].to_vec()).unwrap();
-//        let (format, width, height) = (Format::Y800, 20, 40);
-//        let converted = image.convert_resize(format, width, height);
-//        assert_eq!(converted.format(), format);
-//        assert_eq!(converted.width(), width);
-//        assert_eq!(converted.height(), height);
-//    }
+    fn mem() -> usize { procinfo::pid::statm_self().unwrap().resident }
+
+    fn assert_mem(mem_before: usize, n: usize) {
+        let mem_after = mem();
+        // Allow memory to grow by 8MB, but not more.
+        assert!(
+            mem_after < mem_before + 8 * 1024,
+            "Memory usage at start is {}KB, memory usage after {} loops is {}KB",
+            mem_before, n, mem_after
+        );
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
     #[test]
     fn format() {
         let format = Format::from_label(Cow::Borrowed("Y800"));
