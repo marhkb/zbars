@@ -5,6 +5,7 @@ authors = ["Marcus Behrendt <marcus.behrendt.86@gmail.com>"]
 license = "LGPL-2.1"
 description = "High-level rust bindings to the zbar library"
 repository = "https://github.com/marhkb/zbar-rs.git"
+documentation = "https://docs.rs/crate/zbars"
 readme = "README.md"
 keywords = ["bindings", "ffi", "image", "library", "multimedia"]
 categories = ["api-bindings", "multimedia", "multimedia::images", "external-ffi-bindings", ]
