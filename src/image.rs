@@ -71,6 +71,20 @@ impl<'a> ZBarImage<'a> {
         ::std::mem::forget(data);
         Ok(image)
     }
+
+    /// Creates a `ZBarImage` from borrowed data.
+    ///
+    /// ```compile_fail
+    /// use zbars::prelude::*;
+    /// use std::borrow::Cow;
+    ///
+    /// create_image();
+    ///
+    /// fn create_image<'a>() -> ZBarImage<'a> {
+    ///     ZBarImage::from_borrowed(1, 1, &Format::from_label(Cow::Borrowed("Y8")), &vec![1]).unwrap()
+    /// }
+    /// ```
+    ///
     pub fn from_borrowed<T>(width: u32, height: u32, format: &Format, data: &'a T) -> ZBarImageResult<'a>
         where T: ?Sized + AsRef<[u8]>
     {
