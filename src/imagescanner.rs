@@ -9,9 +9,7 @@ impl ImageScanner {
     pub fn new() -> Self { Self::default() }
     pub fn builder() -> ImageScannerBuilder { ImageScannerBuilder::new() }
     pub fn set_config(&mut self, symbol_type: ZBarSymbolType, config: ZBarConfig, value: i32) -> ZBarResult<()> {
-        let result = unsafe {
-            zbar_image_scanner_set_config(**self, symbol_type, config, value)
-        };
+        let result = unsafe { zbar_image_scanner_set_config(**self, symbol_type, config, value) };
         match result == 0 {
             true  => Ok(()),
             false => Err(result.into())
@@ -71,13 +69,13 @@ impl ImageScannerBuilder {
     }
     pub fn with_cache(&mut self, cache: bool) -> &mut Self { self.cache = cache; self }
 
-    pub fn build(&self) -> ImageScanner {
+    pub fn build(&self) -> ZBarResult<ImageScanner> {
         let mut scanner = ImageScanner::new();
         scanner.enable_cache(self.cache);
-        self.config.iter().for_each(|values| {
-            scanner.set_config(values.0, values.1, values.2);
-        });
-        scanner
+        for values in &self.config {
+            scanner.set_config(values.0, values.1, values.2)?;
+        }
+        Ok(scanner)
     }
 }
 
@@ -96,7 +94,8 @@ mod test {
 
         let scanner = ImageScannerBuilder::new()
             .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
-            .build();
+            .build()
+            .unwrap();
         scanner.scan_image(&mut image).unwrap();
 
         assert_qrcode(image.first_symbol().unwrap());
@@ -113,7 +112,8 @@ mod test {
 
         let scanner = ImageScannerBuilder::new()
             .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 0)
-            .build();
+            .build()
+            .unwrap();
         scanner.scan_image(&mut image).unwrap();
 
         assert!(image.first_symbol().is_none());
@@ -131,8 +131,8 @@ mod test {
 
         let scanner = ImageScannerBuilder::new()
             .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 1)
-            .build();
-
+            .build()
+            .unwrap();
         scanner.scan_image(&mut image).unwrap();
 
         assert_code128(image.first_symbol().unwrap());
@@ -149,8 +149,8 @@ mod test {
 
         let scanner = ImageScannerBuilder::new()
             .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 0)
-            .build();
-
+            .build()
+            .unwrap();
         scanner.scan_image(&mut image).unwrap();
 
         assert!(image.first_symbol().is_none());
@@ -168,8 +168,8 @@ mod test {
 
         let mut scanner = ImageScannerBuilder::new()
             .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 1)
-            .build();
-
+            .build()
+            .unwrap();
         scanner.scan_image(&mut image).unwrap();
 
         scanner.recycle_image(Some(&mut image));

@@ -56,7 +56,8 @@ pub fn main() {
 
     let image_scanner = ImageScanner::builder()
         .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
-        .build();
+        .build()
+        .unwrap();
 
     let symbol_set = image_scanner.scan_image(&mut image)
         .expect("error on scanning image");

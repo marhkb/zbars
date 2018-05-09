@@ -189,7 +189,7 @@ impl<'a> ProcessorBuilder<'a> {
     pub fn with_config(&mut self, symbol_type: ZBarSymbolType, config: ZBarConfig, value: i32) -> &mut Self {
         self.config.push((symbol_type, config, value)); self
     }
-    pub fn build(&self) -> Processor {
+    pub fn build(&self) -> ZBarResult<Processor> {
         let mut processor = Processor::new(self.threaded);
         if let Some(size) = self.size {
             processor.request_size(size.0, size.1);
@@ -203,10 +203,10 @@ impl<'a> ProcessorBuilder<'a> {
         if let Some(ref format) = self.format {
             processor.force_format(&format.0, &format.1);
         }
-        self.config.iter().for_each(|values| {
-            processor.set_config(values.0, values.1, values.2);
-        });
-        processor
+        for values in &self.config {
+            processor.set_config(values.0, values.1, values.2)?;
+        }
+        Ok(processor)
     }
 }
 
@@ -230,7 +230,8 @@ mod test {
     fn test_wrong_video_device() {
         let mut processor = Processor::builder()
             .threaded(true)
-            .build();
+            .build()
+            .unwrap();
         assert!(processor.init("nothing", true).is_err())
     }
 
@@ -243,7 +244,8 @@ mod test {
             .threaded(true)
             .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
             .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 1)
-            .build();
+            .build()
+            .unwrap();
 
         processor.process_image(&mut image);
 
