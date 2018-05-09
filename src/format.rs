@@ -117,14 +117,37 @@ mod test {
     #[test]
     fn test_from_fourcc() {
         assert_eq!(Format::from_fourcc(0x564E5559).label(), "YUNV");
+        assert_eq!(Format::from_fourcc(0x564E5559).fourcc(), 0x564E5559);
         assert_eq!(Format::from_fourcc(0x20203859).label(), "Y8");
-
+        assert_eq!(Format::from_fourcc(0x20203859).fourcc(), 0x20203859);
     }
 
     #[test]
     fn test_from_label() {
         assert_eq!(Format::from_label(Cow::Borrowed("YUNV")).fourcc(), 0x564E5559);
-        assert_eq!(Format::from_label(Cow::Owned("Y8".to_owned())).fourcc(), 0x20203859);
+        assert_eq!(Format::from_label(Cow::Owned("Y8".into())).fourcc(), 0x20203859);
 
+    }
+
+    #[test]
+    fn test_label() {
+        assert_eq!(Format::from_label(Cow::Borrowed("YUNV")).label(), "YUNV");
+    }
+
+    #[test]
+    fn test_fourcc() {
+        assert_eq!(Format::from_fourcc(0x564E5559).fourcc(), 0x564E5559);
+    }
+
+    #[test]
+    fn test_eq() {
+        assert_eq!(Format::from_label(Cow::Borrowed("YUNV")),
+                   Format::from_label(Cow::Borrowed("YUNV")));
+        assert_eq!(Format::from_label(Cow::Borrowed("YUNV")),
+                   Format::from_label(Cow::Owned("YUNV".into())));
+        assert_eq!(Format::from_label(Cow::Borrowed("YUNV")),
+                   Format::from_fourcc(0x564E5559));
+        assert_eq!(Format::from_label(Cow::Owned("YUNV".into())),
+                   Format::from_fourcc(0x564E5559));
     }
 }

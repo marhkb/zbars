@@ -110,7 +110,8 @@ mod test {
 
     #[test]
     fn test_version() {
-        version();
+        let (major, minor) = version();
+        assert_ne!(major + minor, 0);
     }
 
     #[test]
