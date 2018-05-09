@@ -56,7 +56,7 @@ impl<'a> Format<'a> {
         Format {
             fourcc,
             label: Cow::Owned(
-                from_utf8(&unsafe { transmute::<_, [u8; 4]>(fourcc) }).unwrap().to_owned()
+                from_utf8(&unsafe { transmute::<_, [u8; 4]>(fourcc) }).unwrap().trim().to_owned()
             ),
         }
     }
@@ -116,8 +116,15 @@ mod test {
 
     #[test]
     fn test_from_fourcc() {
+        assert_eq!(Format::from_fourcc(0x564E5559).label(), "YUNV");
+        assert_eq!(Format::from_fourcc(0x20203859).label(), "Y8");
+
+    }
+
+    #[test]
+    fn test_from_label() {
         assert_eq!(Format::from_label(Cow::Borrowed("YUNV")).fourcc(), 0x564E5559);
-        assert_eq!(Format::from_label(Cow::Borrowed("Y8")).fourcc(), 0x20203859);
+        assert_eq!(Format::from_label(Cow::Owned("Y8".to_owned())).fourcc(), 0x20203859);
 
     }
 }
