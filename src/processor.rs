@@ -2,21 +2,28 @@ use format::*;
 use image::ZBarImage;
 use super::*;
 use symbolset::SymbolSet;
-use std::ffi::OsString;
+use std::{
+    marker::PhantomData,
+    ffi::OsString
+};
 
 
-pub struct Processor {
+pub struct Processor<'a> {
     processor: *mut zbar_processor_s,
+    userdata_len: Option<usize>,
+    phantom: PhantomData<&'a ()>,
 }
-impl Processor {
+impl<'a> Processor<'a> {
     pub fn new(threaded: bool) -> Self {
         let mut processor = Processor {
-            processor: unsafe { zbar_processor_create(threaded as i32) }
+            processor: unsafe { zbar_processor_create(threaded as i32) },
+            userdata_len: None,
+            phantom: PhantomData,
         };
         processor.set_config(ZBarSymbolType::ZBAR_NONE, ZBarConfig::ZBAR_CFG_ENABLE, 0);
         processor
     }
-    pub fn builder<'a>() -> ProcessorBuilder<'a> { ProcessorBuilder::new() }
+    pub fn builder<'b>() -> ProcessorBuilder<'b> { ProcessorBuilder::new() }
 
     pub fn init<T>(&mut self, video_device: T, enable_display: bool) -> ZBarSimpleResult<()> where T: AsRef<str> {
         let result = unsafe {
@@ -46,13 +53,28 @@ impl Processor {
     pub fn force_format(&mut self, input_format: &Format, output_format: &Format) -> i32 {
         unsafe  { zbar_processor_force_format(**self, input_format.fourcc().into(), output_format.fourcc().into()) }
     }
-    pub fn set_userdata(&mut self, userdata: &[u8]) {
-        //TODO
-        unimplemented!("TBD")
+
+    /// Sets userdata for `Processor`.
+    ///
+    /// ```compile_fail
+    /// use zbars::prelude::*;
+    /// use std::borrow::Cow;
+    ///
+    /// let mut processor = Processor::builder().build().unwrap();
+    /// {
+    ///     processor.set_userdata(&vec![1]);
+    /// }
+    /// ```
+    pub fn set_userdata<T>(&mut self, userdata: &'a T) where T: AsRef<[u8]> {
+        let userdata = userdata.as_ref();
+        self.userdata_len = Some(userdata.len());
+        unsafe { zbar_processor_set_userdata(**self, userdata.as_ref().as_ptr() as *mut u8 as *mut c_void) }
     }
-    pub fn userdata(&self) {
-        //TODO
-        unimplemented!("TBD")
+    pub fn userdata(&self) -> Option<&'a [u8]>{
+        self.userdata_len
+            .map(|len| unsafe {
+                ::std::slice::from_raw_parts(zbar_processor_get_userdata(**self) as *mut u8, len)
+            })
     }
     pub fn set_config(&mut self, symbol_type: ZBarSymbolType, config: ZBarConfig, value: i32) -> ZBarResult<()> {
         let result = unsafe {
@@ -146,15 +168,15 @@ impl Processor {
     }
 }
 
-unsafe impl Send for Processor {}
+unsafe impl<'a> Send for Processor<'a> {}
 
-unsafe impl Sync for Processor {}
+unsafe impl<'a> Sync for Processor<'a> {}
 
-impl Deref for Processor {
+impl<'a> Deref for Processor<'a> {
     type Target = *mut zbar_processor_s;
     fn deref(&self) -> &Self::Target { &self.processor }
 }
-impl Drop for Processor {
+impl<'a> Drop for Processor<'a> {
     fn drop(&mut self) { unsafe { zbar_processor_destroy(**self) } }
 }
 
@@ -189,7 +211,7 @@ impl<'a> ProcessorBuilder<'a> {
     pub fn with_config(&mut self, symbol_type: ZBarSymbolType, config: ZBarConfig, value: i32) -> &mut Self {
         self.config.push((symbol_type, config, value)); self
     }
-    pub fn build(&self) -> ZBarResult<Processor> {
+    pub fn build<'b>(&self) -> ZBarResult<Processor<'b>> {
         let mut processor = Processor::new(self.threaded);
         if let Some(size) = self.size {
             processor.request_size(size.0, size.1);
@@ -233,6 +255,27 @@ mod test {
             .build()
             .unwrap();
         assert!(processor.init("nothing", true).is_err())
+    }
+
+    #[test]
+    fn test_userdata_set_and_get() {
+        let mut userdata = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+        let data = vec![0; 20 * 30];
+
+        let mut processor1 = Processor::builder().build().unwrap();
+        let mut processor2 = Processor::builder().build().unwrap();
+        let mut processor3 = Processor::builder().build().unwrap();
+
+        assert!(processor1.userdata().is_none());
+
+        processor1.set_userdata(&userdata);
+        processor2.set_userdata(&userdata);
+        processor3.set_userdata(&userdata);
+
+        assert!(processor1.userdata().is_some());
+        assert_eq!(processor1.userdata(), processor2.userdata());
+        assert_eq!(processor1.userdata(), processor3.userdata());
     }
 
     #[test]

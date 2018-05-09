@@ -124,10 +124,27 @@ impl<'a> ZBarImage<'a> {
 //    pub fn set_size(&mut self, width: u32, height: u32) {
 //        unsafe { zbar_image_set_size(**self, width, height) }
 //    }
+
+    /// Sets userdata for `ZBarImage`.
+    ///
+    /// ```compile_fail
+    /// use zbars::prelude::*;
+    /// use std::borrow::Cow;
+    ///
+    /// let mut image =
+    ///     ZBarImage::from_owned(1, 1, &Format::from_label(Cow::Borrowed("Y800")), vec![0]).unwrap();
+    /// {
+    ///     image.set_userdata(&vec![1]);
+    /// }
+    /// ```
     pub fn set_userdata<T>(&mut self, userdata: &'a T) where T: AsRef<[u8]> {
         let userdata = userdata.as_ref();
         self.userdata_len = Some(userdata.len());
-        unsafe { zbar_image_set_userdata(**self, userdata.as_ref().as_ptr() as *mut u8 as *mut c_void) }
+        unsafe {
+            zbar_image_set_userdata(
+                **self,
+                userdata.as_ref().as_ptr() as *mut u8 as *mut c_void)
+        }
     }
     pub fn userdata(&self) -> Option<&'a [u8]>{
         self.userdata_len
