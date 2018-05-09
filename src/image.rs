@@ -262,10 +262,7 @@ pub mod from_image {
         /// ```
         /// extern crate zbars;
         ///
-        /// use zbars::image::{
-        ///     ZBarImage,
-        ///     from_image::*
-        /// };
+        /// use zbars::image::ZBarImage;
         ///
         /// fn main() {
         ///     let image = ZBarImage::from_path("test/code128.gif").unwrap();
@@ -287,11 +284,8 @@ pub mod from_image {
         /// extern crate zbars;
         /// extern crate image;
         ///
-        /// use zbars::image::{
-        ///     ZBarImage,
-        ///     from_image::*
-        /// };
-        /// use self::image::{DynamicImage, ImageBuffer};
+        /// use zbars::image::ZBarImage;
+        /// use image::{DynamicImage, ImageBuffer};
         ///
         /// fn main() {
         ///     let image = ZBarImage::from_dyn_image(
@@ -329,11 +323,8 @@ pub mod from_image {
         /// extern crate zbars;
         /// extern crate image;
         ///
-        /// use zbars::image::{
-        ///     ZBarImage,
-        ///     from_image::*
-        /// };
-        /// use self::image::{DynamicImage, ImageBuffer};
+        /// use zbars::image::ZBarImage;
+        /// use image::{DynamicImage, ImageBuffer};
         ///
         /// fn main() {
         ///     let image = ZBarImage::from_generic_image(
