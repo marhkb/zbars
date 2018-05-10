@@ -237,36 +237,83 @@ impl<'a> ZBarImage<'a> {
     }
 }
 
-#[cfg(feature = "zbar_fork")]
-impl<'a> ZBarImage<'a> {
-    pub fn size(&self) -> (u32, u32) {
-        unsafe {
-            let mut dim = (0, 0);
-            zbar_image_get_size(**self, &mut dim.0 as *mut u32, &mut dim.1 as *mut u32);
-            dim
-        }
-    }
-    pub fn crop(&self) -> (u32, u32, u32, u32) {
-        unsafe {
-            let mut crop = (0, 0, 0, 0);
-            zbar_image_get_crop(
-                **self,
-                &mut crop.0 as *mut u32, &mut crop.1 as *mut u32,
-                &mut crop.2 as *mut u32, &mut crop.3 as *mut u32
-            );
-            crop
-        }
-    }
-    pub fn set_crop(&mut self, x: u32, y: u32, width: u32, height: u32) {
-        unsafe { zbar_image_set_crop(**self, x, y, width, height) }
-    }
-}
 impl<'a> Deref for ZBarImage<'a> {
     type Target = *mut zbar_image_s;
     fn deref(&self) -> &Self::Target { &self.image }
 }
 impl<'a> Drop for ZBarImage<'a> {
     fn drop(&mut self) { unsafe { zbar_image_destroy(**self) } }
+}
+
+#[cfg(feature = "zbar_fork")]
+pub mod zbar_fork {
+
+    use super::*;
+
+    impl<'a> ZBarImage<'a> {
+        pub fn size(&self) -> (u32, u32) {
+            unsafe {
+                let mut dim = (0, 0);
+                zbar_image_get_size(**self, &mut dim.0 as *mut u32, &mut dim.1 as *mut u32);
+                dim
+            }
+        }
+        pub fn crop(&self) -> (u32, u32, u32, u32) {
+            unsafe {
+                let mut crop = (0, 0, 0, 0);
+                zbar_image_get_crop(
+                    **self,
+                    &mut crop.0 as *mut u32, &mut crop.1 as *mut u32,
+                    &mut crop.2 as *mut u32, &mut crop.3 as *mut u32
+                );
+                crop
+            }
+        }
+        pub fn set_crop(&mut self, x: u32, y: u32, width: u32, height: u32) {
+            unsafe { zbar_image_set_crop(**self, x, y, width, height) }
+        }
+    }
+
+    #[cfg(test)]
+    mod test {
+        use super::*;
+
+        #[test]
+        fn test_size() {
+            assert_eq!(
+                ZBarImage::from_owned(
+                    2, 3, &Format::from_label(Cow::Borrowed("Y800")), [0; 2 * 3].to_vec()
+                ).unwrap().size(),
+                (2, 3)
+            );
+        }
+
+        #[test]
+        fn test_crop() {
+            let image = ZBarImage::from_owned(
+                20, 30, &Format::from_label(Cow::Borrowed("Y800")), [0; 20 * 30].to_vec()
+            ).unwrap();
+            assert_eq!(image.crop(), (0, 0, 20, 30));
+        }
+
+        #[test]
+        fn test_set_crop_smaller() {
+            let mut image = ZBarImage::from_owned(
+                20, 30, &Format::from_label(Cow::Borrowed("Y800")), [0; 20 * 30].to_vec()
+            ).unwrap();
+            image.set_crop(5, 5, 10, 10);
+            assert_eq!(image.crop(), (5, 5, 10, 10));
+        }
+
+        #[test]
+        fn test_set_crop_larger() {
+            let mut image = ZBarImage::from_owned(
+                20, 30, &Format::from_label(Cow::Borrowed("Y800")), [0; 20 * 30].to_vec()
+            ).unwrap();
+            image.set_crop(5, 50, 100, 200);
+            assert_eq!(image.crop(), (5, 30, 15, 0));
+        }
+    }
 }
 
 #[cfg(feature = "from_image")]
@@ -436,48 +483,6 @@ pub mod from_image {
     }
 }
 
-#[cfg(test)]
-#[cfg(feature = "zbar_fork")]
-mod test_zbar_fork {
-    use super::*;
-
-    #[test]
-    fn test_size() {
-        assert_eq!(
-            ZBarImage::from_owned(
-                2, 3, &Format::from_label(Cow::Borrowed("Y800")), [0; 2 * 3].to_vec()
-            ).unwrap().size(),
-            (2, 3)
-        );
-    }
-
-    #[test]
-    fn test_crop() {
-        let mut image = ZBarImage::from_owned(
-            20, 30, &Format::from_label(Cow::Borrowed("Y800")), [0; 20 * 30].to_vec()
-        ).unwrap();
-        assert_eq!(image.crop(), (0, 0, 20, 30));
-    }
-
-    #[test]
-    fn test_set_crop_smaller() {
-        let mut image = ZBarImage::from_owned(
-            20, 30, &Format::from_label(Cow::Borrowed("Y800")), [0; 20 * 30].to_vec()
-        ).unwrap();
-        image.set_crop(5, 5, 10, 10);
-        assert_eq!(image.crop(), (5, 5, 10, 10));
-    }
-
-    #[test]
-    fn test_set_crop_larger() {
-        let mut image = ZBarImage::from_owned(
-            20, 30, &Format::from_label(Cow::Borrowed("Y800")), [0; 20 * 30].to_vec()
-        ).unwrap();
-        image.set_crop(5, 50, 100, 200);
-        assert_eq!(image.crop(), (5, 30, 15, 0));
-    }
-}
-
 #[cfg(target_os = "linux")]
 #[cfg(test)]
 mod test_mem {
@@ -622,7 +627,7 @@ mod test {
 
     #[test]
     fn test_userdata_set_and_get() {
-        let mut userdata = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let userdata = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
 
         let data = vec![0; 20 * 30];
 

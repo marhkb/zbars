@@ -20,7 +20,9 @@ impl<'a> Processor<'a> {
             userdata_len: None,
             phantom: PhantomData,
         };
-        processor.set_config(ZBarSymbolType::ZBAR_NONE, ZBarConfig::ZBAR_CFG_ENABLE, 0);
+        processor.set_config(ZBarSymbolType::ZBAR_NONE, ZBarConfig::ZBAR_CFG_ENABLE, 0)
+            // save to unwrap here
+            .unwrap();
         processor
     }
     pub fn builder<'b>() -> ProcessorBuilder<'b> { ProcessorBuilder::new() }
@@ -290,7 +292,7 @@ mod test {
             .build()
             .unwrap();
 
-        processor.process_image(&mut image);
+        processor.process_image(&mut image).unwrap();
 
         let symbol = image.first_symbol().unwrap();
 
