@@ -1,11 +1,9 @@
 use super::*;
 use image::*;
 use symbolset::*;
-use std::marker::PhantomData;
 
 pub struct ImageScanner {
     scanner: *mut zbar_image_scanner_s,
-//    phantom: PhantomData<&'a ()>,
 }
 impl ImageScanner {
     pub fn new() -> Self { Self::default() }
@@ -25,10 +23,10 @@ impl ImageScanner {
             zbar_image_scanner_recycle_image(**self, image.map_or(::std::ptr::null_mut(), |i| **i))
         }
     }
-    pub fn results(&self) -> Option<SymbolSet> {
+    pub fn results<'a>(&'a self) -> Option<SymbolSet<'a, Self>> {
         SymbolSet::from_raw(unsafe { zbar_image_scanner_get_results(**self) })
     }
-    pub fn scan_image<'a>(&self, image: &'a mut ZBarImage) -> ZBarSimpleResult<SymbolSet<'a>> {
+    pub fn scan_image<'a>(&'a self, image: &'a mut ZBarImage) -> ZBarSimpleResult<SymbolSet<'a, ZBarImage>> {
         let result: i32 = unsafe { zbar_scan_image(**self, **image) };
         match result >= 0 {
             true  => Ok(image.symbols().unwrap()), // symbols can be unwrapped because image is surely scanned
@@ -45,7 +43,6 @@ impl Default for ImageScanner {
     fn default() -> Self {
         let mut scanner = ImageScanner {
             scanner: unsafe { zbar_image_scanner_create() },
-//            phantom: PhantomData,
         };
         // Think it is safe to unwrap here
         scanner.set_config(ZBarSymbolType::ZBAR_NONE, ZBarConfig::ZBAR_CFG_ENABLE, 0).unwrap();
@@ -144,7 +141,7 @@ mod test {
         assert!(image.first_symbol().is_none());
     }
 
-    fn assert_qrcode(symbol: Symbol) {
+    fn assert_qrcode<T>(symbol: Symbol<T>) {
         assert_eq!(symbol.symbol_type(), ZBarSymbolType::ZBAR_QRCODE);
         assert_eq!(symbol.data(), "https://www.ikimuni.de/");
         assert_eq!(symbol.next().is_none(), true);
@@ -182,7 +179,7 @@ mod test {
         assert!(image.first_symbol().is_none());
     }
 
-    fn assert_code128(symbol: Symbol) {
+    fn assert_code128<T>(symbol: Symbol<T>) {
         assert_eq!(symbol.symbol_type(), ZBarSymbolType::ZBAR_CODE128);
         assert_eq!(symbol.data(), "Screwdriver");
         assert_eq!(symbol.next().is_none(), true);
