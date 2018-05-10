@@ -130,17 +130,14 @@ impl<'a> ZBarImage<'a> {
     pub fn first_symbol(&self) -> Option<Symbol> {
         Symbol::from_raw(unsafe { zbar_image_first_symbol(self.image) })
     }
-    //TODO: Not Needed
-    //    pub fn set_format(&mut self) {
-//        unimplemented!("TBD")
-//    }
     pub fn set_sequence(&mut self, sequence_num: u32) {
         unsafe { zbar_image_set_sequence(**self, sequence_num) }
     }
-    //TODO: Not needed
-//    pub fn set_size(&mut self, width: u32, height: u32) {
-//        unsafe { zbar_image_set_size(**self, width, height) }
-//    }
+
+    /// Just a crop with origin
+    pub fn set_size(&mut self, width: u32, height: u32) {
+        unsafe { zbar_image_set_size(**self, width, height) }
+    }
 
     /// Sets userdata for `ZBarImage`.
     ///
@@ -409,13 +406,29 @@ mod test_zbar_fork {
     }
 
     #[test]
-    fn test_crop_get_and_set() {
+    fn test_crop() {
         let mut image = ZBarImage::from_owned(
             20, 30, &Format::from_label(Cow::Borrowed("Y800")), [0; 20 * 30].to_vec()
         ).unwrap();
         assert_eq!(image.crop(), (0, 0, 20, 30));
+    }
+
+    #[test]
+    fn test_set_crop_smaller() {
+        let mut image = ZBarImage::from_owned(
+            20, 30, &Format::from_label(Cow::Borrowed("Y800")), [0; 20 * 30].to_vec()
+        ).unwrap();
         image.set_crop(5, 5, 10, 10);
         assert_eq!(image.crop(), (5, 5, 10, 10));
+    }
+
+    #[test]
+    fn test_set_crop_larger() {
+        let mut image = ZBarImage::from_owned(
+            20, 30, &Format::from_label(Cow::Borrowed("Y800")), [0; 20 * 30].to_vec()
+        ).unwrap();
+        image.set_crop(5, 50, 100, 200);
+        assert_eq!(image.crop(), (5, 30, 15, 0));
     }
 }
 
@@ -491,6 +504,26 @@ mod test {
         assert_eq!(image.sequence(), 1);
         image.set_sequence(999);
         assert_eq!(image.sequence(), 999);
+    }
+
+    #[test]
+    fn test_set_size_smaller() {
+        let mut image = ZBarImage::from_owned(
+            20, 30, &Format::from_label(Cow::Borrowed("Y800")), [0; 20 * 30].to_vec()
+        ).unwrap();
+        image.set_size(10, 12);
+        assert_eq!(image.width(), 10);
+        assert_eq!(image.height(), 12);
+    }
+
+    #[test]
+    fn test_set_size_larger() {
+        let mut image = ZBarImage::from_owned(
+            20, 30, &Format::from_label(Cow::Borrowed("Y800")), [0; 20 * 30].to_vec()
+        ).unwrap();
+        image.set_size(100, 120);
+        assert_eq!(image.width(), 100);
+        assert_eq!(image.height(), 120);
     }
 
     #[test]
