@@ -1,15 +1,19 @@
 use super::*;
 use symbolset::*;
-use std::mem;
+use std::{
+    marker::PhantomData,
+    mem,
+};
 
-pub struct Symbol {
+pub struct Symbol<'a> {
     symbol: *const zbar_symbol_s,
+    phantom: PhantomData<&'a ()>,
 }
-impl Symbol {
+impl<'a> Symbol<'a> {
     pub fn from_raw(symbol: *const zbar_symbol_s) -> Option<Self> {
         match symbol.is_null() {
             true  => None,
-            false => Some(Self { symbol }),
+            false => Some(Self { symbol, phantom: PhantomData }),
         }
     }
     pub fn symbol_ref(&mut self, refs: i32) {
@@ -19,6 +23,38 @@ impl Symbol {
     pub fn symbol_type(&self) -> ZBarSymbolType {
         unsafe { mem::transmute(zbar_symbol_get_type(**self)) }
     }
+    /// Returns the decoded data for this `Symbol`
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use zbars::prelude::*;
+    /// use std::borrow::Cow;
+    ///
+    ///
+    /// let mut image = ZBarImage::from_owned(1, 1, &Format::from_label(Cow::Borrowed("Y8")), vec![1]).unwrap();
+    /// let mut scanner = ImageScanner::builder().build().unwrap();
+    /// if let Ok(symbol_set) = scanner.scan_image(&mut image) {
+    ///     if let Some(symbol) = symbol_set.first_symbol() {
+    ///         println!("{}", symbol.data());
+    ///     }
+    /// };
+    /// ```
+    ///
+    /// # Code that should not compile
+    ///
+    /// ```compile_fail
+    /// use zbars::prelude::*;
+    /// use std::borrow::Cow;
+    ///
+    /// let data = {
+    ///     let mut image = ZBarImage::from_owned(1, 1, &Format::from_label(Cow::Borrowed("Y8")), vec![1]).unwrap();
+    ///     let mut scanner = ImageScanner::builder().build().unwrap();
+    ///     scanner.scan_image(&mut image);
+    ///     image.data()
+    /// };
+    /// ```
+    ///
     pub fn data(&self) -> &str {
         unsafe { CStr::from_ptr(zbar_symbol_get_data(**self)).to_str().unwrap() }
     }
@@ -61,7 +97,7 @@ impl Symbol {
 }
 
 #[cfg(feature = "zbar_fork")]
-impl Symbol {
+impl<'a> Symbol<'a> {
     pub fn configs(&self) -> u32 { unsafe { zbar_symbol_get_configs(**self) } }
     pub fn modifiers(&self) -> ZBarModifier {
         //TODO: zbar.h says a bitmask is returned but zbar_modifier_e is not a bitmask
@@ -69,13 +105,13 @@ impl Symbol {
     }
     pub fn orientation(&self) -> ZBarOrientation { unsafe { zbar_symbol_get_orientation (**self) } }
 }
-impl Deref for Symbol {
+impl<'a> Deref for Symbol<'a> {
     type Target = *const zbar_symbol_s;
     fn deref(&self) -> &Self::Target { &self.symbol }
 }
 
 pub struct SymbolPolygon<'a> {
-    symbol: &'a Symbol,
+    symbol: &'a Symbol<'a>,
 }
 impl<'a> SymbolPolygon<'a> {
     pub fn point(&self, index: u32) -> Option<(i32, i32)> {
@@ -83,8 +119,8 @@ impl<'a> SymbolPolygon<'a> {
     }
     pub fn iter(&self) -> SymbolPolygonIter { self.into() }
 }
-impl<'a> From<&'a Symbol> for SymbolPolygon<'a> {
-    fn from(symbol: &'a Symbol) -> Self { Self { symbol } }
+impl<'a> From<&'a Symbol<'a>> for SymbolPolygon<'a> {
+    fn from(symbol: &'a Symbol<'a>) -> Self { Self { symbol } }
 }
 
 pub struct SymbolPolygonIter<'a> {

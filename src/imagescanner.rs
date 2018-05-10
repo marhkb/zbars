@@ -1,9 +1,11 @@
 use super::*;
 use image::*;
 use symbolset::*;
+use std::marker::PhantomData;
 
 pub struct ImageScanner {
     scanner: *mut zbar_image_scanner_s,
+//    phantom: PhantomData<&'a ()>,
 }
 impl ImageScanner {
     pub fn new() -> Self { Self::default() }
@@ -26,7 +28,7 @@ impl ImageScanner {
     pub fn results(&self) -> Option<SymbolSet> {
         SymbolSet::from_raw(unsafe { zbar_image_scanner_get_results(**self) })
     }
-    pub fn scan_image(&self, image: &mut ZBarImage) -> ZBarSimpleResult<SymbolSet> {
+    pub fn scan_image<'a>(&self, image: &'a mut ZBarImage) -> ZBarSimpleResult<SymbolSet<'a>> {
         let result: i32 = unsafe { zbar_scan_image(**self, **image) };
         match result >= 0 {
             true  => Ok(image.symbols().unwrap()), // symbols can be unwrapped because image is surely scanned
@@ -42,7 +44,8 @@ unsafe impl Sync for ImageScanner {}
 impl Default for ImageScanner {
     fn default() -> Self {
         let mut scanner = ImageScanner {
-            scanner: unsafe { zbar_image_scanner_create() }
+            scanner: unsafe { zbar_image_scanner_create() },
+//            phantom: PhantomData,
         };
         // Think it is safe to unwrap here
         scanner.set_config(ZBarSymbolType::ZBAR_NONE, ZBarConfig::ZBAR_CFG_ENABLE, 0).unwrap();
@@ -70,7 +73,7 @@ impl ImageScannerBuilder {
     }
     pub fn with_cache(&mut self, cache: bool) -> &mut Self { self.cache = cache; self }
 
-    pub fn build(&self) -> ZBarResult<ImageScanner> {
+    pub fn build<'a>(&self) -> ZBarResult<ImageScanner> {
         let mut scanner = ImageScanner::new();
         scanner.enable_cache(self.cache);
         for values in &self.config {
@@ -90,6 +93,26 @@ mod test {
     use super::*;
 
     #[test]
+    fn evil() {
+        let mut image = ZBarImage::from_path("test/qrcode.png").unwrap();
+
+        let scanner = ImageScannerBuilder::new()
+            .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
+            .build()
+            .unwrap();
+        {
+            scanner.scan_image(&mut image).unwrap();
+        }
+
+        {
+            let symbols = scanner.scan_image(&mut image).unwrap();
+            println!("{}", symbols.first_symbol().unwrap().data())
+
+        }
+
+    }
+
+    #[test]
     fn test_qrcode() {
         let mut image = ZBarImage::from_path("test/qrcode.png").unwrap();
 
@@ -101,7 +124,8 @@ mod test {
 
         assert_qrcode(image.first_symbol().unwrap());
 
-        let mut iter = image.symbols().unwrap().iter();
+        let symbols = image.symbols().unwrap();
+        let mut iter = symbols.iter();
 
         assert_qrcode(iter.next().unwrap());
         assert!(iter.next().is_none());
@@ -138,7 +162,8 @@ mod test {
 
         assert_code128(image.first_symbol().unwrap());
 
-        let mut iter = image.symbols().unwrap().iter();
+        let symbols = image.symbols().unwrap();
+        let mut iter = symbols.iter();
 
         assert_code128(iter.next().unwrap());
         assert!(iter.next().is_none());

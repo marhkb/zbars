@@ -164,7 +164,43 @@ impl<'a> ZBarImage<'a> {
             )
         }
     }
-    pub fn symbols(&self) -> Option<SymbolSet> {
+    /// Returns an `Option` containing the `SymbolSet` or `None` if the image hasn't been scanned.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use zbars::prelude::*;
+    /// use std::borrow::Cow;
+    ///
+    /// let mut image = ZBarImage::from_owned(1, 1, &Format::from_label(Cow::Borrowed("Y8")), vec![1]).unwrap();
+    /// let mut scanner = ImageScanner::builder().build().unwrap();
+    /// match scanner.scan_image(&mut image) {
+    ///     Ok(_) => match image.symbols() {
+    ///         Some(symbols) => match symbols.first_symbol() {
+    ///             Some(symbol) => println!("{}", symbol.data()),
+    ///             None         => println!("no symbols in scanned image"),
+    ///         }
+    ///         None          => unreachable!("Not possible because image has surely been scanned"),
+    ///     }
+    ///     Err(e)           => println!("error scanning image {}", e),
+    /// };
+    /// ```
+    ///
+    /// # Code that should not compile
+    ///
+    /// ```compile_fail
+    /// use zbars::prelude::*;
+    /// use std::borrow::Cow;
+    ///
+    /// let mut scanner = ImageScanner::builder().build().unwrap();
+    ///
+    /// let symbols = {
+    ///     let mut image = ZBarImage::from_owned(1, 1, &Format::from_label(Cow::Borrowed("Y8")), vec![1]).unwrap();
+    ///     scanner.scan_image(&mut image).unwrap();
+    ///     image.symbols()
+    /// };
+    /// ```
+    pub fn symbols(&'a self) -> Option<SymbolSet<'a>> {
         SymbolSet::from_raw(unsafe { zbar_image_get_symbols(**self) })
     }
     pub fn set_symbols(&mut self, symbols: Option<&SymbolSet>) {
@@ -280,7 +316,21 @@ impl<'a> ZBarImage<'a> {
     /// image2.set_userdata_owned("Hello World".as_bytes().to_owned());
     /// assert_eq!(image1.userdata().unwrap(), image1.userdata().unwrap());
     /// ```
-    pub fn userdata(&'a self) -> Option<&'a [u8]> {
+    ///
+    /// # Code that should not compile
+    ///
+    /// ```compile_fail
+    /// use zbars::prelude::*;
+    /// use std::borrow::Cow;
+    ///
+    /// let userdata = {
+    ///     let mut image =
+    ///         ZBarImage::from_owned(1, 1, &Format::from_label(Cow::Borrowed("Y800")), vec![0]).unwrap();
+    ///     image.set_userdata_owned("Hello World".as_bytes().to_owned());
+    ///     image.userdata()
+    /// };
+    /// ```
+    pub fn userdata(&self) -> Option<&[u8]> {
         self.userdata_len
             .or(self.userdata_owned.as_ref().map(Vec::len))
             .map(|len| unsafe {
@@ -321,10 +371,6 @@ impl<'a> Deref for ZBarImage<'a> {
 impl<'a> Drop for ZBarImage<'a> {
     fn drop(&mut self) { unsafe { zbar_image_destroy(**self) } }
 }
-
-unsafe impl<'a> Sync for ZBarImage<'a> {}
-
-unsafe impl<'a> Send for ZBarImage<'a> {}
 
 #[cfg(feature = "zbar_fork")]
 pub mod zbar_fork {
@@ -429,7 +475,7 @@ pub mod from_image {
         ///     let image = ZBarImage::from_path("test/code128.gif").unwrap();
         /// }
         /// ```
-        pub fn from_path<P>(path: P) -> ImageResult<Self> where P: AsRef<Path> {
+        pub fn from_path<P>(path: P) -> ImageResult<ZBarImage<'a>> where P: AsRef<Path> {
             image::open(&path).map(Self::from_dyn_image)
         }
 

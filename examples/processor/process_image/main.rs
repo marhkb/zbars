@@ -29,8 +29,8 @@ pub fn main() {
     // set processor visible in order display the image to process
     processor.set_visible(true).unwrap();
 
-    let symbol = processor.process_image(&mut image).unwrap().first_symbol().unwrap();
-    println!("{}", symbol.data());
+    let symbols = processor.process_image(&mut image).unwrap();
+    println!("{}", symbols.first_symbol().unwrap().data());
 
     // display image for 2 seconds
     thread::sleep(Duration::from_millis(2000));

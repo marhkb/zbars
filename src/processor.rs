@@ -7,7 +7,6 @@ use std::{
     ffi::OsString
 };
 
-
 pub struct Processor<'a> {
     processor: *mut zbar_processor_s,
     userdata_len: Option<usize>,
@@ -125,7 +124,7 @@ impl<'a> Processor<'a> {
         }
         self.userdata_owned = Some(userdata);
     }
-    /// Returns user data of `Processor`.
+    /// Returns assigned user data of `Processor`.
     ///
     /// # Examples
     ///
@@ -139,7 +138,19 @@ impl<'a> Processor<'a> {
     /// processor2.set_userdata_owned("Hello World".as_bytes().to_owned());
     /// assert_eq!(processor1.userdata().unwrap(), processor1.userdata().unwrap());
     /// ```
-    pub fn userdata(&'a self) -> Option<&'a [u8]> {
+    ///
+    /// # Code that should not compile
+    ///
+    /// ```compile_fail
+    /// use zbars::prelude::*;
+    ///
+    /// let userdata = {
+    ///     let mut processor = Processor::builder().build().unwrap();
+    ///     processor.set_userdata_owned("Hello World".as_bytes().to_owned());
+    ///     processor.userdata()
+    /// };
+    /// ```
+    pub fn userdata(&self) -> Option<&[u8]> {
         self.userdata_len
             .or(self.userdata_owned.as_ref().map(Vec::len))
             .map(|len| unsafe {
@@ -229,7 +240,7 @@ impl<'a> Processor<'a> {
     pub fn process_one(&self, timeout: i32) -> i32 {
         unsafe { zbar_process_one(**self, timeout) }
     }
-    pub fn process_image(&self, image: &mut ZBarImage) -> ZBarSimpleResult<SymbolSet> {
+    pub fn process_image<'b>(&self, image: &'b mut ZBarImage) -> ZBarSimpleResult<SymbolSet<'b>> {
         let result = unsafe { zbar_process_image(**self, **image) };
         match result >= 0 {
             true  => Ok(image.symbols().unwrap()), // symbols can be unwrapped because image is surely scanned

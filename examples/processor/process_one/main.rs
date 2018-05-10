@@ -22,8 +22,6 @@ pub fn main() {
     processor.process_one(-1);
 
     // retrieve decoded results
-    let symbol = processor.get_results().unwrap().first_symbol().unwrap();
-
-    // print symbol data
-    println!("{}", symbol.data());
+    let symbols = processor.get_results().unwrap();
+    println!("{}", symbols.first_symbol().unwrap().data());
 }
