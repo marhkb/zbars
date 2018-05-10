@@ -322,6 +322,10 @@ impl<'a> Drop for ZBarImage<'a> {
     fn drop(&mut self) { unsafe { zbar_image_destroy(**self) } }
 }
 
+unsafe impl<'a> Sync for ZBarImage<'a> {}
+
+unsafe impl<'a> Send for ZBarImage<'a> {}
+
 #[cfg(feature = "zbar_fork")]
 pub mod zbar_fork {
 
