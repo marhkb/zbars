@@ -508,14 +508,13 @@ pub mod from_image {
     #[cfg(test)]
     mod test {
         use super::*;
+        use self::image::ImageBuffer;
 
         #[test]
         fn test_from_path() { assert!(ZBarImage::from_path("test/code128.gif").is_ok()); }
 
         #[test]
         fn test_from_dyn_image_luma() {
-            use self::image::ImageBuffer;
-
             let data = vec![0, 0, 0];
             let image = ZBarImage::from_dyn_image(
                 DynamicImage::ImageLuma8(ImageBuffer::from_vec(1, 3, data).unwrap())
@@ -525,8 +524,6 @@ pub mod from_image {
 
         #[test]
         fn test_from_dyn_image_rgb() {
-            use self::image::ImageBuffer;
-
             let data = vec![0, 0, 0];
             let image = ZBarImage::from_dyn_image(
                 DynamicImage::ImageRgb8(ImageBuffer::from_vec(1, 1, data).unwrap())
@@ -536,8 +533,6 @@ pub mod from_image {
 
         #[test]
         fn test_from_generic_image_luma() {
-            use self::image::ImageBuffer;
-
             let data = vec![0, 0, 0];
             let image = ZBarImage::from_generic_image(
                 &DynamicImage::ImageLuma8(ImageBuffer::from_vec(1, 3, data).unwrap())
@@ -547,8 +542,6 @@ pub mod from_image {
 
         #[test]
         fn test_from_generic_image_rgb() {
-            use self::image::ImageBuffer;
-
             let data = vec![0, 0, 0];
             let image = ZBarImage::from_generic_image(
                 &DynamicImage::ImageRgb8(ImageBuffer::from_vec(1, 1, data).unwrap())
