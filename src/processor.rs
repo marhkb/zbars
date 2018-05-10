@@ -56,6 +56,8 @@ impl<'a> Processor<'a> {
 
     /// Sets userdata for `Processor`.
     ///
+    /// # Code that should not compile
+    ///
     /// ```compile_fail
     /// use zbars::prelude::*;
     /// use std::borrow::Cow;
@@ -259,7 +261,7 @@ mod test {
 
     #[test]
     fn test_userdata_set_and_get() {
-        let mut userdata = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let userdata = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
 
         let mut processor1 = Processor::builder().build().unwrap();
         let mut processor2 = Processor::builder().build().unwrap();

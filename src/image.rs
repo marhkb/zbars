@@ -75,9 +75,8 @@ impl<'a> ZBarImage<'a> {
     /// use zbars::prelude::*;
     /// use std::borrow::Cow;
     ///
-    /// // only data of size 1 for demonstration
+    /// // only data of length 1 for demonstration
     /// ZBarImage::from_owned(1, 1, &Format::from_label(Cow::Borrowed("Y8")), vec![1]).unwrap();
-    ///
     /// ```
     pub fn from_owned(width: u32, height: u32, format: &Format, data: Vec<u8>) -> ZBarImageResult<'a> {
         let image = Self::new(width, height, format, data.as_slice(), Some(zbar_image_free_data))?;
@@ -87,17 +86,30 @@ impl<'a> ZBarImage<'a> {
 
     /// Creates a `ZBarImage` from borrowed data.
     ///
-    /// ```compile_fail
+    /// # Examples
+    ///
+    /// ```
     /// use zbars::prelude::*;
     /// use std::borrow::Cow;
     ///
-    /// create_image();
+    /// let data = vec![1];
+    /// let image = ZBarImage::from_borrowed(1, 1, &Format::from_label(Cow::Borrowed("Y8")), &data).unwrap();
     ///
-    /// fn create_image<'a>() -> ZBarImage<'a> {
-    ///     ZBarImage::from_borrowed(1, 1, &Format::from_label(Cow::Borrowed("Y8")), &vec![1]).unwrap()
-    /// }
     /// ```
     ///
+    /// # Code that should not compile
+    ///
+    /// ```compile_fail
+    /// use zbars::{
+    ///     prelude::*,
+    ///     image::ZBarImageResult
+    /// };
+    /// use std::borrow::Cow;
+    ///
+    /// fn create_image<'a>() -> ZBarImageResult<'a> {
+    ///     ZBarImage::from_borrowed(1, 1, &Format::from_label(Cow::Borrowed("Y8")), &vec![1])
+    /// }
+    /// ```
     pub fn from_borrowed<T>(width: u32, height: u32, format: &Format, data: T) -> ZBarImageResult<'a>
         where T: AsRef<[u8]> + 'a
     {
@@ -107,12 +119,44 @@ impl<'a> ZBarImage<'a> {
         //TODO: Needed?
         unimplemented!("TBD")
     }
+    /// Returns the `Format` of the pixels.
     pub fn format(&self) -> Format {
         unsafe { Format::from_fourcc(zbar_image_get_format(**self) as u32) }
     }
     pub fn sequence(&self) -> u32 { unsafe { zbar_image_get_sequence(**self) } }
+    /// Returns the width of the image in pixels
     pub fn width(&self) -> u32 { unsafe { zbar_image_get_width(**self) } }
+    /// Returns the height of the image in pixels
     pub fn height(&self) -> u32 { unsafe { zbar_image_get_height(**self) } }
+
+    /// Retrieves the image buffer.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use zbars::prelude::*;
+    /// use std::borrow::Cow;
+    ///
+    /// let image = ZBarImage::from_owned(1, 1, &Format::from_label(Cow::Borrowed("Y8")), vec![1]).unwrap();
+    /// println!("{:?}", image.data());
+    /// ```
+    ///
+    /// # Code that should not compile
+    ///
+    /// ```compile_fail
+    /// use zbars::prelude::*;
+    /// use std::borrow::Cow;
+    ///
+    /// fn data<'a>() -> &'a [u8] {
+    ///     let image = ZBarImage::from_owned(1, 1, &Format::from_label(Cow::Borrowed("Y8")), vec![1]).unwrap();
+    ///     image.data()
+    /// }
+    /// fn data_static() -> &'static [u8] {
+    ///     let image = ZBarImage::from_owned(1, 1, &Format::from_label(Cow::Borrowed("Y8")), vec![1]).unwrap();
+    ///     image.data()
+    /// }
+    ///
+    /// ```
     pub fn data(&self) -> &[u8] {
         unsafe {
             from_raw_parts(
@@ -140,6 +184,8 @@ impl<'a> ZBarImage<'a> {
     }
 
     /// Sets userdata for `ZBarImage`.
+    ///
+    /// # Code that should not compile
     ///
     /// ```compile_fail
     /// use zbars::prelude::*;
