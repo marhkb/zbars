@@ -34,11 +34,12 @@ impl fmt::Display for ZBarImageError {
 pub struct ZBarImage<'a> {
     image: *mut zbar_image_s,
     userdata_len: Option<usize>,
+    userdata_owned: Option<Vec<u8>>,
     phantom: PhantomData<&'a ()>,
 }
 impl<'a> ZBarImage<'a> {
     unsafe fn from_raw(image: *mut zbar_image_s) -> Self {
-        Self { image, userdata_len: None, phantom: PhantomData }
+        Self { image, userdata_len: None, userdata_owned: None, phantom: PhantomData }
     }
     fn new<T>(width: u32,
               height: u32,
@@ -94,7 +95,6 @@ impl<'a> ZBarImage<'a> {
     ///
     /// let data = vec![1];
     /// let image = ZBarImage::from_borrowed(1, 1, &Format::from_label(Cow::Borrowed("Y8")), &data).unwrap();
-    ///
     /// ```
     ///
     /// # Code that should not compile
@@ -155,7 +155,6 @@ impl<'a> ZBarImage<'a> {
     ///     let image = ZBarImage::from_owned(1, 1, &Format::from_label(Cow::Borrowed("Y8")), vec![1]).unwrap();
     ///     image.data()
     /// }
-    ///
     /// ```
     pub fn data(&self) -> &[u8] {
         unsafe {
@@ -183,7 +182,25 @@ impl<'a> ZBarImage<'a> {
         unsafe { zbar_image_set_size(**self, width, height) }
     }
 
-    /// Sets userdata for `ZBarImage`.
+    /// Sets borrowed user data for `ZBarImage`.
+    ///
+    /// User data can be shared across different `ZbarImages`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use zbars::prelude::*;
+    /// use std::borrow::Cow;
+    ///
+    /// let userdata = "Hello World".as_bytes();
+    /// let mut image1 =
+    ///      ZBarImage::from_owned(1, 1, &Format::from_label(Cow::Borrowed("Y800")), vec![0]).unwrap();
+    /// let mut image2 =
+    ///      ZBarImage::from_owned(1, 1, &Format::from_label(Cow::Borrowed("Y800")), vec![0]).unwrap();
+    /// image1.set_userdata_borrowed(&userdata);
+    /// image2.set_userdata_borrowed(&userdata);
+    /// assert_eq!(image1.userdata().unwrap(), image1.userdata().unwrap());
+    /// ```
     ///
     /// # Code that should not compile
     ///
@@ -194,10 +211,25 @@ impl<'a> ZBarImage<'a> {
     /// let mut image =
     ///     ZBarImage::from_owned(1, 1, &Format::from_label(Cow::Borrowed("Y800")), vec![0]).unwrap();
     /// {
-    ///     image.set_userdata(&vec![1]);
+    ///     let userdata = "Hello World".as_bytes();
+    ///
+    ///     // userdata does not live long enough
+    ///     image.set_userdata_borrowed(&userdata);
     /// }
     /// ```
-    pub fn set_userdata<T>(&mut self, userdata: &'a T) where T: AsRef<[u8]> {
+    ///
+    /// ```compile_fail
+    /// use zbars::prelude::*;
+    /// use std::borrow::Cow;
+    ///
+    /// let mut image =
+    ///     ZBarImage::from_owned(1, 1, &Format::from_label(Cow::Borrowed("Y800")), vec![0]).unwrap();
+    ///
+    /// // userdata does not live long enough
+    /// image.set_userdata_borrowed(&"Hello World".as_bytes());
+    /// ```
+    pub fn set_userdata_borrowed<T>(&mut self, userdata: &'a T) where T: AsRef<[u8]> {
+        self.userdata_owned = None;
         let userdata = userdata.as_ref();
         self.userdata_len = Some(userdata.len());
         unsafe {
@@ -206,12 +238,56 @@ impl<'a> ZBarImage<'a> {
                 userdata.as_ref().as_ptr() as *mut u8 as *mut c_void)
         }
     }
-    pub fn userdata(&self) -> Option<&'a [u8]>{
+    /// Sets owned user data for `ZBarImage`.
+    ///
+    /// User data cannot be shared across different `ZbarImages`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use zbars::prelude::*;
+    /// use std::borrow::Cow;
+    ///
+    /// let userdata = "Hello World".as_bytes().to_owned();
+    /// let mut image =
+    ///      ZBarImage::from_owned(1, 1, &Format::from_label(Cow::Borrowed("Y800")), vec![0]).unwrap();
+    /// image.set_userdata_owned(userdata);
+    /// assert_eq!(image.userdata().unwrap(), "Hello World".as_bytes());
+    /// ```
+    pub fn set_userdata_owned(&mut self, userdata: Vec<u8>) {
+        self.userdata_len = None;
+        unsafe {
+            zbar_image_set_userdata(
+                **self,
+                userdata.as_ptr() as *mut u8 as *mut c_void)
+        }
+        self.userdata_owned = Some(userdata);
+    }
+    /// Returns user data of `ZBarImage`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use zbars::prelude::*;
+    /// use std::borrow::Cow;
+    ///
+    /// let userdata = "Hello World".as_bytes();
+    /// let mut image1 =
+    ///      ZBarImage::from_owned(1, 1, &Format::from_label(Cow::Borrowed("Y800")), vec![0]).unwrap();
+    /// let mut image2 =
+    ///      ZBarImage::from_owned(1, 1, &Format::from_label(Cow::Borrowed("Y800")), vec![0]).unwrap();
+    /// image1.set_userdata_borrowed(&userdata);
+    /// image2.set_userdata_owned("Hello World".as_bytes().to_owned());
+    /// assert_eq!(image1.userdata().unwrap(), image1.userdata().unwrap());
+    /// ```
+    pub fn userdata(&'a self) -> Option<&'a [u8]> {
         self.userdata_len
+            .or(self.userdata_owned.as_ref().map(Vec::len))
             .map(|len| unsafe {
                 from_raw_parts(zbar_image_get_userdata(**self) as *mut u8, len)
             })
     }
+    /// Writes image on `ZBar format` to the given path.
     pub fn write<P>(&self, path: P) -> ZBarResult<()> where P: AsRef<Path> {
         let result = unsafe {
             zbar_image_write(
@@ -224,6 +300,7 @@ impl<'a> ZBarImage<'a> {
             e => Err(e.into()),
         }
     }
+    /// Not implemented by ZBar itself.
     pub fn read<P>(_path: P) -> Option<Self> where P: AsRef<Path> {
         //TODO: zbar.h days: TBD
 //        ZbarImage {
@@ -347,7 +424,7 @@ pub mod from_image {
         /// fn main() {
         ///     let image = ZBarImage::from_path("test/code128.gif").unwrap();
         /// }
-        ///
+        /// ```
         pub fn from_path<P>(path: P) -> ImageResult<Self> where P: AsRef<Path> {
             image::open(&path).map(Self::from_dyn_image)
         }
@@ -376,7 +453,6 @@ pub mod from_image {
         ///     );
         /// }
         /// ```
-        ///
         pub fn from_dyn_image(image: DynamicImage) -> Self {
             ZBarImage::from_owned(
                 image.dimensions().0,
@@ -415,7 +491,6 @@ pub mod from_image {
         ///     );
         /// }
         /// ```
-        ///
         pub fn from_generic_image<I>(image: &I) -> Self
             where I: GenericImage + 'static,
                   Vec<u8>: From<Vec<<<I as GenericImage>::Pixel as Pixel>::Subpixel>>
@@ -626,7 +701,7 @@ mod test {
     }
 
     #[test]
-    fn test_userdata_set_and_get() {
+    fn test_userdata_borrowed_set_and_get() {
         let userdata = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
 
         let data = vec![0; 20 * 30];
@@ -643,14 +718,70 @@ mod test {
 
         assert!(image1.userdata().is_none());
 
-        image1.set_userdata(&userdata);
-        image2.set_userdata(&userdata);
-        image3.set_userdata(&userdata);
+        image1.set_userdata_borrowed(&userdata);
+        image2.set_userdata_borrowed(&userdata);
+        image3.set_userdata_borrowed(&userdata);
 
-        assert!(image1.userdata().is_some());
-        assert_eq!(image1.userdata(), image2.userdata());
-        assert_eq!(image1.userdata(), image3.userdata());
+        assert_eq!(image1.userdata().unwrap(), image2.userdata().unwrap());
+        assert_eq!(image1.userdata().unwrap(), image3.userdata().unwrap());
     }
+
+    #[test]
+    fn test_userdata_owned_set_and_get() {
+        let userdata = "Hello World".as_bytes();
+
+        let data = vec![0; 20 * 30];
+
+        let mut image1 = ZBarImage::from_owned(
+            20, 30, &Format::from_label(Cow::Borrowed("Y800")), data.clone()
+        ).unwrap();
+        let mut image2 = ZBarImage::from_borrowed(
+            20, 30, &Format::from_label(Cow::Borrowed("Y800")), data.as_slice()
+        ).unwrap();
+        let mut image3 = ZBarImage::from_borrowed(
+            20, 30, &Format::from_label(Cow::Borrowed("Y800")), data.as_slice()
+        ).unwrap();
+
+        assert!(image1.userdata().is_none());
+
+        image1.set_userdata_owned(userdata.to_owned());
+        image2.set_userdata_owned(userdata.to_owned());
+        image3.set_userdata_owned(userdata.to_owned());
+
+        assert_eq!(image1.userdata().unwrap(), image2.userdata().unwrap());
+        assert_eq!(image1.userdata().unwrap(), image3.userdata().unwrap());
+    }
+
+    #[test]
+    fn test_userdata_mixed_set_and_get() {
+        let userdata = "Hello World".as_bytes();
+
+        let data = vec![0; 20 * 30];
+
+        let mut image1 = ZBarImage::from_owned(
+            20, 30, &Format::from_label(Cow::Borrowed("Y800")), data.clone()
+        ).unwrap();
+        let mut image2 = ZBarImage::from_borrowed(
+            20, 30, &Format::from_label(Cow::Borrowed("Y800")), data.as_slice()
+        ).unwrap();
+        let mut image3 = ZBarImage::from_borrowed(
+            20, 30, &Format::from_label(Cow::Borrowed("Y800")), data.as_slice()
+        ).unwrap();
+
+        assert!(image1.userdata().is_none());
+
+        image1.set_userdata_borrowed(&userdata);
+        image2.set_userdata_owned(userdata.to_owned());
+        image3.set_userdata_borrowed(&userdata);
+
+        assert_eq!(image1.userdata().unwrap(), image2.userdata().unwrap());
+        assert_eq!(image1.userdata().unwrap(), image3.userdata().unwrap());
+
+        image2.set_userdata_owned("Hallo Welt".as_bytes().to_owned());
+
+        assert_ne!(image1.userdata().unwrap(), image2.userdata().unwrap());
+    }
+
 
     #[test]
     fn test_write() {
