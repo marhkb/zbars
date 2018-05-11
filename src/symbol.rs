@@ -66,16 +66,16 @@ impl<'a, T: 'a>  Symbol<'a, T>  {
         unsafe { zbar_symbol_get_count(**self) }
     }
     pub fn loc_size(&self) -> u32 { unsafe { zbar_symbol_get_loc_size(**self) } }
-    pub fn loc_x(&self, index: u32) -> Option<i32> {
+    pub fn loc_x(&self, index: u32) -> Option<u32> {
         match unsafe { zbar_symbol_get_loc_x(**self, index) } {
             -1 => None,
-            x  => Some(x),
+            x  => Some(x as u32),
         }
     }
-    pub fn loc_y(&self, index: u32) -> Option<i32> {
+    pub fn loc_y(&self, index: u32) -> Option<u32> {
         match unsafe { zbar_symbol_get_loc_y(**self, index) } {
             -1 => None,
-            y  => Some(y),
+            y  => Some(y as u32),
         }
     }
     // TODO: live as long as image or processor
@@ -117,7 +117,7 @@ pub struct SymbolPolygon<'a, T: 'a>   {
     symbol: &'a Symbol<'a, T>  ,
 }
 impl<'a, T: 'a>  SymbolPolygon<'a, T>  {
-    pub fn point(&self, index: u32) -> Option<(i32, i32)> {
+    pub fn point(&self, index: u32) -> Option<(u32, u32)> {
         self.symbol.loc_x(index).map(|x| (x, self.symbol.loc_y(index).unwrap()))
     }
     pub fn iter(&'a self) -> SymbolPolygonIter<'a, T> { self.into() }
@@ -136,7 +136,7 @@ impl<'a, T: 'a>  From<&'a SymbolPolygon<'a, T>  > for SymbolPolygonIter<'a, T>  
     }
 }
 impl<'a, 'b: 'a, T: 'b> Iterator for SymbolPolygonIter<'a, T>  {
-    type Item = (i32, i32);
+    type Item = (u32, u32);
     fn next(&mut self) -> Option<<Self as Iterator>::Item> {
         let next = self.polygon.point(self.index);
         self.index += 1;
