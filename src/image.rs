@@ -79,8 +79,8 @@ impl<'a> ZBarImage<'a> {
     /// let data = vec![1];
     /// let image = ZBarImage::from_borrowed(1, 1, Format::from_label_borrowed("Y8"), &data).unwrap();
     /// ```
-    pub fn from_borrowed<T>(width: u32, height: u32, format: Format, data: &'a T) -> ZBarImageResult<'a>
-        where T: AsRef<[u8]>
+    pub fn from_borrowed(width: u32, height: u32, format: Format, data: &'a impl AsRef<[u8]>)
+        -> ZBarImageResult<'a>
     {
         Self::new(width, height, format, Cow::Borrowed(data.as_ref()))
     }
@@ -191,7 +191,7 @@ impl<'a> ZBarImage<'a> {
     /// ```
     pub fn userdata(&self) -> Option<&Cow<'a, [u8]>> { self.userdata.as_ref() }
     /// Writes image on `ZBar format` to the given path.
-    pub fn write<P>(&self, path: P) -> ZBarResult<()> where P: AsRef<Path> {
+    pub fn write(&self, path: impl AsRef<Path>) -> ZBarResult<()> {
         let result = unsafe {
             zbar_image_write(
                 **self,
@@ -204,7 +204,7 @@ impl<'a> ZBarImage<'a> {
         }
     }
     /// Not implemented by ZBar itself.
-    pub fn read<P>(_path: P) -> Option<Self> where P: AsRef<Path> {
+    pub fn read(_path: impl AsRef<Path>) -> Option<Self> {
         //TODO: zbar.h days: TBD
 //        ZbarImage {
 //            image: unsafe {
@@ -328,7 +328,7 @@ pub mod from_image {
         ///     let image = ZBarImage::from_path("test/code128.gif").unwrap();
         /// }
         /// ```
-        pub fn from_path<P>(path: P) -> ImageResult<ZBarImage<'a>> where P: AsRef<Path> {
+        pub fn from_path(path: impl AsRef<Path>) -> ImageResult<ZBarImage<'a>> {
             image::open(&path).map(Self::from_dyn_image)
         }
 

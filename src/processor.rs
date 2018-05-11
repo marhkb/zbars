@@ -24,7 +24,7 @@ impl<'a> Processor<'a> {
     }
     pub fn builder<'b>() -> ProcessorBuilder<'b> { ProcessorBuilder::new() }
 
-    pub fn init<T>(&mut self, video_device: T, enable_display: bool) -> ZBarSimpleResult<()> where T: AsRef<str> {
+    pub fn init(&mut self, video_device: impl AsRef<str>, enable_display: bool) -> ZBarSimpleResult<()> {
         let result = unsafe {
             zbar_processor_init(
                 **self,
@@ -108,7 +108,7 @@ impl<'a> Processor<'a> {
             false => Err(result.into())
         }
     }
-    pub fn set_control<T>(&mut self, control_name: T, value: i32) -> ZBarSimpleResult<()> where T: AsRef<str> {
+    pub fn set_control(&mut self, control_name: impl AsRef<str>, value: i32) -> ZBarSimpleResult<()> {
         //TODO
         unimplemented!("TBD")
 //        let result = unsafe {
@@ -124,7 +124,7 @@ impl<'a> Processor<'a> {
 //            false => Err(result),
 //        }
     }
-    pub fn get_control<T>(&self, control_name: T) -> ZBarResult<i32> where T: AsRef<str> {
+    pub fn get_control(&self, control_name: impl AsRef<str>) -> ZBarResult<i32> {
         //TODO
         unimplemented!("TBD")
 //        let mut value = 0;
