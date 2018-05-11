@@ -42,6 +42,8 @@ impl  Symbol  {
         unsafe { CStr::from_ptr(zbar_symbol_get_data(**self)).to_str().unwrap() }
     }
     pub fn quality(&self) -> i32 { unsafe { zbar_symbol_get_quality(**self) } }
+    // TODO: Test
+    /// Retrieve the current cache count
     pub fn count(&self) -> i32 {
         //TODO: Specify what count is
         /*
@@ -65,10 +67,11 @@ impl  Symbol  {
         }
     }
     pub fn next(&self) -> Option<Symbol> { Self::from_raw(unsafe { zbar_symbol_next(**self) }) }
+    // TODO: Test
     pub fn components(&self) -> Option<SymbolSet> {
         SymbolSet::from_raw(unsafe { zbar_symbol_get_components(**self) } )
     }
-    //
+    // TODO: Test
     pub fn first_component(&self) -> Option<Symbol> {
         Self::from_raw(unsafe { zbar_symbol_first_component(**self) } )
     }
@@ -89,13 +92,13 @@ impl  Symbol  {
     pub fn polygon(&self) -> SymbolPolygon { SymbolPolygon::from(self) }
 }
 
-impl  Deref for Symbol {
+impl Deref for Symbol {
     type Target = *const zbar_symbol_s;
     fn deref(&self) -> &Self::Target { &self.symbol }
 }
 
 impl Drop for Symbol {
-    fn drop(&mut self) { (*self).set_ref(-1); }
+    fn drop(&mut self) { self.set_ref(-1); }
 }
 
 #[cfg(feature = "zbar_fork")]
@@ -103,11 +106,14 @@ pub mod zbar_fork {
     use super::*;
 
     impl  Symbol   {
+        // TODO: Test bitmask
         pub fn configs(&self) -> u32 { unsafe { zbar_symbol_get_configs(**self) } }
+        // TODO: Test bitmask
         pub fn modifiers(&self) -> ZBarModifier {
             //TODO: zbar.h says a bitmask is returned but zbar_modifier_e is not a bitmask
             unsafe { ::std::mem::transmute(zbar_symbol_get_modifiers(**self)) }
         }
+        // TODO: Test
         pub fn orientation(&self) -> ZBarOrientation { unsafe { zbar_symbol_get_orientation (**self) } }
     }
 }
