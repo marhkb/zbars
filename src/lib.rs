@@ -27,8 +27,8 @@ pub use zbar_modifier_e as ZBarModifier;
 
 pub mod format;
 pub mod image;
-mod symbol;
-mod symbolset;
+pub mod symbol;
+pub mod symbolset;
 pub mod imagescanner;
 pub mod processor;
 pub mod prelude;

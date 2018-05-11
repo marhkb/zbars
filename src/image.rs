@@ -452,52 +452,6 @@ pub mod from_image {
     }
 }
 
-#[cfg(target_os = "linux")]
-#[cfg(test)]
-mod test_mem {
-
-    extern crate procinfo;
-
-    use super::*;
-
-    const N: usize = 100000;
-
-    #[test]
-    fn test_mem_from_buf() {
-        let mem_before = mem();
-        for _ in 0..N {
-            ZBarImage::new(
-                500, 500, Format::from_label_borrowed("Y800"), Cow::Owned(vec![0; 500 * 500])
-            ).unwrap();
-        }
-        assert_mem(mem_before, N);
-    }
-
-    #[test]
-    fn test_mem_from_slice() {
-        let mem_before = mem();
-        for _ in 0..N {
-            let buf = [0; 500 * 500];
-            ZBarImage::new(
-                500, 500, Format::from_label_borrowed("Y800"), Cow::Borrowed(&buf)
-            ).unwrap();
-        }
-        assert_mem(mem_before, N);
-    }
-
-    fn mem() -> usize { procinfo::pid::statm_self().unwrap().resident }
-
-    fn assert_mem(mem_before: usize, n: usize) {
-        let mem_after = mem();
-        // Allow memory to grow by 8MB, but not more.
-        assert!(
-            mem_after < mem_before + 8 * 1024,
-            "Memory usage at start is {}KB, memory usage after {} loops is {}KB",
-            mem_before, n, mem_after
-        );
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
