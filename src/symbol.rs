@@ -6,7 +6,8 @@ pub struct Symbol   {
     symbol: *const zbar_symbol_s,
 }
 impl  Symbol  {
-    pub fn from_raw(symbol: *const zbar_symbol_s) -> Option<Self> {
+    /// Creates a new `SymbolSet` from raw data.
+    pub(crate) fn from_raw(symbol: *const zbar_symbol_s) -> Option<Self> {
         match !symbol.is_null() {
             true  => {
                 let mut symbol = Self { symbol };
@@ -16,6 +17,7 @@ impl  Symbol  {
             false => None
         }
     }
+    /// Increases the reference count.
     fn set_ref(&mut self, refs: i32) { unsafe { zbar_symbol_ref(**self, refs) } }
 
     pub fn symbol_type(&self) -> ZBarSymbolType {
@@ -70,9 +72,18 @@ impl  Symbol  {
     pub fn first_component(&self) -> Option<Symbol> {
         Self::from_raw(unsafe { zbar_symbol_first_component(**self) } )
     }
-    pub fn symbol_xml(&self) -> &str {
-        //TODO
-        unimplemented!()
+    /// Returns a xml representation of the `Symbol`.
+    pub fn xml(&self) -> String {
+        unsafe {
+            let mut cstr_buf = CString::new("").unwrap();
+            CStr::from_ptr(
+                zbar_symbol_xml(
+                    **self,
+                    cstr_buf.as_ptr() as *mut *mut i8,
+                    &mut 0_u32 as *mut u32
+                )
+            ).to_str().unwrap().to_owned()
+        }
     }
 
     pub fn polygon(&self) -> SymbolPolygon { SymbolPolygon::from(self) }
@@ -129,5 +140,22 @@ impl<'a> Iterator for SymbolPolygonIter<'a>  {
         let next = self.polygon.point(self.index);
         self.index += 1;
         next
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use prelude::*;
+
+    #[test]
+    fn test_symbol_xml() {
+        let mut image = ZBarImage::from_path("test/qrcode.png").unwrap();
+        let mut scanner = ImageScanner::builder()
+            .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
+            .build()
+            .unwrap();
+
+        println!("{}", scanner.scan_image(&mut image).unwrap().first_symbol().unwrap().xml());
     }
 }

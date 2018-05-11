@@ -38,6 +38,24 @@ mod test_mem {
         assert_eq!(loop_decode().first_symbol().unwrap().data(), "https://www.ikimuni.de/")
     }
 
+    #[test]
+    fn test_symbol_xml() {
+        let mut image = ZBarImage::from_path("test/qrcode.png").unwrap();
+        let mut scanner = ImageScanner::builder()
+            .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
+            .build()
+            .unwrap();
+        let symbols = scanner.scan_image(&mut image).unwrap();
+
+        let mem_before = mem();
+
+        for _ in 0..N*10 {
+            let xml = symbols.first_symbol().unwrap().xml();
+        }
+
+        assert_mem(mem_before, N);
+    }
+
     fn loop_decode() -> SymbolSet {
         let mut image = ZBarImage::from_path("test/qrcode.png").unwrap();
         let mut scanner = ImageScanner::builder()
@@ -47,7 +65,7 @@ mod test_mem {
 
         let mem_before = mem();
 
-        for _ in 0..N / 10000 {
+        for _ in 0..N / 1000 {
             let symbols = scanner.scan_image(&mut image).unwrap();
         }
 

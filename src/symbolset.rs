@@ -5,7 +5,8 @@ pub struct SymbolSet {
     symbol_set: *const zbar_symbol_set_s,
 }
 impl  SymbolSet  {
-    pub fn from_raw(symbol_set: *const zbar_symbol_set_s) -> Option<Self> {
+    /// Creates a new `SymbolSet` from raw data.
+    pub(crate) fn from_raw(symbol_set: *const zbar_symbol_set_s) -> Option<Self> {
         match !symbol_set.is_null() {
             true  => {
                 let mut symbol_set = Self { symbol_set };
@@ -16,6 +17,7 @@ impl  SymbolSet  {
         }
     }
 
+    /// Increases the reference count.
     fn set_ref(&mut self, refs: i32) { unsafe { zbar_symbol_set_ref(**self, refs) } }
 
     pub fn size(&self) -> i32 { unsafe { zbar_symbol_set_get_size(**self) } }

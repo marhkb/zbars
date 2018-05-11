@@ -28,6 +28,7 @@ impl<'a> Processor<'a> {
         let result = unsafe {
             zbar_processor_init(
                 **self,
+                // TODO: check shorter possibilities
                 OsString::from(video_device.as_ref()).to_str().unwrap().as_ptr() as *const i8,
                 enable_display as i32
             )

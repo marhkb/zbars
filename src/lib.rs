@@ -9,7 +9,10 @@ extern crate lazy_static;
 use std::{
     error::Error,
     fmt,
-    ffi::CStr,
+    ffi::{
+        CStr,
+        CString,
+    },
     ops::Deref,
     os::raw::c_void,
 };
