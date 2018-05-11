@@ -164,7 +164,11 @@ mod test {
 
         assert_eq!(
             scanner.scan_image(&mut image).unwrap().first_symbol().unwrap().xml(),
-            "<symbol type='QR-Code' quality='1' orientation='UP'><data><![CDATA[https://www.ikimuni.de/]]></data></symbol>"
+            if cfg!(feature = "zbar_fork") {
+                "<symbol type='QR-Code' quality='1' orientation='UP'><data><![CDATA[https://www.ikimuni.de/]]></data></symbol>"
+            } else {
+                "<symbol type=\'QR-Code\' quality=\'1\'><data><![CDATA[https://www.ikimuni.de/]]></data></symbol>"
+            }
         );
     }
 }
