@@ -28,7 +28,7 @@ use std::{
 /// let format = Format::from_fourcc(0x30303859);
 /// println!("{}", format.label());
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Format<'a> {
     /// FOURCC value
     fourcc: u32,
@@ -93,6 +93,15 @@ impl<'a> Format<'a> {
             label,
         }
     }
+
+    pub fn from_label_owned(label: impl ToString) -> Self {
+        Self::from_label(Cow::Owned(label.to_string()))
+    }
+
+    pub fn from_label_borrowed(label: &'a (impl AsRef<str> + ?Sized)) -> Self {
+        Self::from_label(Cow::Borrowed(label.as_ref()))
+    }
+
     /// Returns the FOURCC value for this `Format`
     pub fn fourcc(&self) -> u32 { self.fourcc }
     /// Returns the FOURCC label for this `Format`

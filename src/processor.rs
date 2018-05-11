@@ -3,23 +3,19 @@ use image::ZBarImage;
 use super::*;
 use symbolset::SymbolSet;
 use std::{
-    marker::PhantomData,
+    borrow::Cow,
     ffi::OsString
 };
 
 pub struct Processor<'a> {
     processor: *mut zbar_processor_s,
-    userdata_len: Option<usize>,
-    userdata_owned: Option<Vec<u8>>,
-    phantom: PhantomData<&'a ()>,
+    userdata: Option<Cow<'a, [u8]>>,
 }
 impl<'a> Processor<'a> {
     pub fn new(threaded: bool) -> Self {
         let mut processor = Processor {
             processor: unsafe { zbar_processor_create(threaded as i32) },
-            userdata_len: None,
-            userdata_owned: None,
-            phantom: PhantomData,
+            userdata: None,
         };
         processor.set_config(ZBarSymbolType::ZBAR_NONE, ZBarConfig::ZBAR_CFG_ENABLE, 0)
             // save to unwrap here
@@ -69,61 +65,25 @@ impl<'a> Processor<'a> {
     /// let userdata = "Hello World".as_bytes();
     /// let mut processor1 = Processor::builder().build().unwrap();
     /// let mut processor2 = Processor::builder().build().unwrap();
-    /// processor1.set_userdata_borrowed(&userdata);
-    /// processor2.set_userdata_borrowed(&userdata);
+    /// processor1.set_userdata_borrowed(Some(&userdata));
+    /// processor2.set_userdata_borrowed(Some(&userdata));
     /// assert_eq!(processor1.userdata().unwrap(), processor1.userdata().unwrap());
     /// ```
-    ///
-    /// # Code that should not compile
-    ///
-    /// ```compile_fail
-    /// use zbars::prelude::*;
-    ///
-    /// let mut processor = Processor::builder().build().unwrap();
-    /// {
-    ///     let userdata = "Hello World".as_bytes();
-    ///     processor.set_userdata_borrowed(&vec![1]);
-    /// }
-    /// ```
-    ///
-    /// ```compile_fail
-    /// use zbars::prelude::*;
-    ///
-    /// let mut processor = Processor::builder().build().unwrap();
-    /// processor.set_userdata_borrowed(&"Hello World".as_bytes());
-    /// ```
-    pub fn set_userdata_borrowed<T>(&mut self, userdata: &'a T) where T: AsRef<[u8]> {
-        self.userdata_owned = None;
-        let userdata = userdata.as_ref();
-        self.userdata_len = Some(userdata.len());
+    pub fn set_userdata(&mut self, userdata: Option<Cow<'a, [u8]>>) {
         unsafe {
             zbar_processor_set_userdata(
                 **self,
-                userdata.as_ref().as_ptr() as *mut u8 as *mut c_void)
+                userdata.as_ref().map_or(std::ptr::null(), |s| s.as_ptr()) as *mut u8 as *mut c_void)
         }
+        self.userdata = userdata;
     }
-    /// Sets owned user data for `Processor`.
-    ///
-    /// User data cannot be shared across different `Processors`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use zbars::prelude::*;
-    ///
-    /// let mut processor = Processor::builder().build().unwrap();
-    /// processor.set_userdata_owned("Hello World".as_bytes().to_owned());
-    /// assert_eq!(processor.userdata().unwrap(), "Hello World".as_bytes());
-    /// ```
-    pub fn set_userdata_owned(&mut self, userdata: Vec<u8>) {
-        self.userdata_len = None;
-        unsafe {
-            zbar_processor_set_userdata(
-                **self,
-                userdata.as_ptr() as *mut u8 as *mut c_void)
-        }
-        self.userdata_owned = Some(userdata);
+    pub fn set_userdata_owned(&mut self, userdata: Option<Vec<u8>>) {
+        self.set_userdata(userdata.map(Cow::Owned))
     }
+    pub fn set_userdata_borrowed(&mut self, userdata: Option<&'a (impl AsRef<[u8]> + Clone)>) {
+        self.set_userdata(userdata.map(AsRef::as_ref).map(Cow::Borrowed))
+    }
+
     /// Returns assigned user data of `Processor`.
     ///
     /// # Examples
@@ -134,29 +94,11 @@ impl<'a> Processor<'a> {
     /// let userdata = "Hello World".as_bytes();
     /// let mut processor1 = Processor::builder().build().unwrap();
     /// let mut processor2 = Processor::builder().build().unwrap();
-    /// processor1.set_userdata_borrowed(&userdata);
-    /// processor2.set_userdata_owned("Hello World".as_bytes().to_owned());
+    /// processor1.set_userdata_borrowed(Some(&userdata));
+    /// processor2.set_userdata_owned(Some("Hello World".as_bytes().to_owned()));
     /// assert_eq!(processor1.userdata().unwrap(), processor1.userdata().unwrap());
     /// ```
-    ///
-    /// # Code that should not compile
-    ///
-    /// ```compile_fail
-    /// use zbars::prelude::*;
-    ///
-    /// let userdata = {
-    ///     let mut processor = Processor::builder().build().unwrap();
-    ///     processor.set_userdata_owned("Hello World".as_bytes().to_owned());
-    ///     processor.userdata()
-    /// };
-    /// ```
-    pub fn userdata(&self) -> Option<&[u8]> {
-        self.userdata_len
-            .or(self.userdata_owned.as_ref().map(Vec::len))
-            .map(|len| unsafe {
-                ::std::slice::from_raw_parts(zbar_processor_get_userdata(**self) as *mut u8, len)
-            })
-    }
+    pub fn userdata(&self) -> Option<&Cow<'a, [u8]>> { self.userdata.as_ref() }
     pub fn set_config(&mut self, symbol_type: ZBarSymbolType, config: ZBarConfig, value: i32) -> ZBarResult<()> {
         let result = unsafe {
             zbar_processor_set_config(**self, symbol_type, config, value)
@@ -339,7 +281,7 @@ mod test {
     }
 
     #[test]
-    fn test_userdata_borrowed_set_and_get() {
+    fn test_userdata_set_and_get() {
         let userdata = "Hello World".as_bytes().to_owned();
 
         let mut processor1 = Processor::builder().build().unwrap();
@@ -348,50 +290,12 @@ mod test {
 
         assert!(processor1.userdata().is_none());
 
-        processor1.set_userdata_borrowed(&userdata);
-        processor2.set_userdata_borrowed(&userdata);
-        processor3.set_userdata_borrowed(&userdata);
+        processor1.set_userdata_borrowed(Some(&userdata));
+        processor2.set_userdata_owned(Some(userdata.clone()));
+        processor3.set_userdata_borrowed(Some(&userdata));
 
         assert_eq!(processor1.userdata().unwrap(), processor2.userdata().unwrap());
         assert_eq!(processor1.userdata().unwrap(), processor3.userdata().unwrap());
-    }
-
-    fn test_userdata_owned_set_and_get() {
-        let userdata = "Hello World".as_bytes();
-
-        let mut processor1 = Processor::builder().build().unwrap();
-        let mut processor2 = Processor::builder().build().unwrap();
-        let mut processor3 = Processor::builder().build().unwrap();
-
-        assert!(processor1.userdata().is_none());
-
-        processor1.set_userdata_owned(userdata.to_owned());
-        processor2.set_userdata_owned(userdata.to_owned());
-        processor3.set_userdata_owned(userdata.to_owned());
-
-        assert_eq!(processor1.userdata().unwrap(), processor2.userdata().unwrap());
-        assert_eq!(processor1.userdata().unwrap(), processor3.userdata().unwrap());
-    }
-
-    fn test_userdata_owned_mixed_and_get() {
-        let userdata = "Hello World".as_bytes();
-
-        let mut processor1 = Processor::builder().build().unwrap();
-        let mut processor2 = Processor::builder().build().unwrap();
-        let mut processor3 = Processor::builder().build().unwrap();
-
-        assert!(processor1.userdata().is_none());
-
-        processor1.set_userdata_borrowed(&userdata);
-        processor2.set_userdata_owned(userdata.to_owned());
-        processor3.set_userdata_borrowed(&userdata);
-
-        assert_eq!(processor1.userdata().unwrap(), processor2.userdata().unwrap());
-        assert_eq!(processor1.userdata().unwrap(), processor3.userdata().unwrap());
-
-        processor2.set_userdata_owned("Hallo Welt".as_bytes().to_owned());
-
-        assert_ne!(processor1.userdata().unwrap(), processor2.userdata().unwrap());
     }
 
     #[test]

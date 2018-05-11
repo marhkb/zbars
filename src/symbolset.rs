@@ -25,45 +25,14 @@ impl  SymbolSet  {
     ///
     /// ```
     /// use zbars::prelude::*;
-    /// use std::borrow::Cow;
     ///
-    ///
-    /// let mut image = ZBarImage::from_owned(1, 1, &Format::from_label(Cow::Borrowed("Y8")), vec![1]).unwrap();
+    /// let mut image = ZBarImage::from_owned(1, 1, Format::from_label_borrowed("Y8"), vec![1]).unwrap();
     /// let mut scanner = ImageScanner::builder().build().unwrap();
     /// if let Ok(symbol_set) = scanner.scan_image(&mut image) {
     ///     match symbol_set.first_symbol() {
     ///         Some(symbol) => println!("{}", symbol.data()),
     ///         None         => println!("no symbols in symbol set"),
     ///     }
-    /// };
-    /// ```
-    ///
-    /// # Code that should not compile
-    ///
-    /// ```compile_fail
-    /// use zbars::prelude::*;
-    /// use std::borrow::Cow;
-    ///
-    /// let mut scanner = ImageScanner::builder().build().unwrap();
-    ///
-    /// let first = {
-    ///     let mut image = ZBarImage::from_owned(1, 1, &Format::from_label(Cow::Borrowed("Y8")), vec![1]).unwrap();
-    ///     scanner.scan_image(&mut image).unwrap();
-    ///     let symbols = image.symbols().unwrap();
-    ///     symbols.first_symbol()
-    /// };
-    /// ```
-    ///
-    /// ```compile_fail
-    /// use zbars::prelude::*;
-    /// use std::borrow::Cow;
-    ///
-    /// let mut scanner = ImageScanner::builder().build().unwrap();
-    ///
-    /// let first = {
-    ///     let mut image = ZBarImage::from_owned(1, 1, &Format::from_label(Cow::Borrowed("Y8")), vec![1]).unwrap();
-    ///     let symbols = scanner.scan_image(&mut image).unwrap();
-    ///     symbols.first_symbol()
     /// };
     /// ```
     pub fn first_symbol(&self) -> Option<Symbol> {

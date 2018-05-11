@@ -27,10 +27,8 @@ impl  Symbol  {
     ///
     /// ```
     /// use zbars::prelude::*;
-    /// use std::borrow::Cow;
     ///
-    ///
-    /// let mut image = ZBarImage::from_owned(1, 1, &Format::from_label(Cow::Borrowed("Y8")), vec![1]).unwrap();
+    /// let mut image = ZBarImage::from_owned(1, 1, Format::from_label_borrowed("Y8"), vec![1]).unwrap();
     /// let mut scanner = ImageScanner::builder().build().unwrap();
     /// if let Ok(symbol_set) = scanner.scan_image(&mut image) {
     ///     if let Some(symbol) = symbol_set.first_symbol() {
@@ -38,21 +36,6 @@ impl  Symbol  {
     ///     }
     /// };
     /// ```
-    ///
-    /// # Code that should not compile
-    ///
-    /// ```compile_fail
-    /// use zbars::prelude::*;
-    /// use std::borrow::Cow;
-    ///
-    /// let data = {
-    ///     let mut image = ZBarImage::from_owned(1, 1, &Format::from_label(Cow::Borrowed("Y8")), vec![1]).unwrap();
-    ///     let mut scanner = ImageScanner::builder().build().unwrap();
-    ///     scanner.scan_image(&mut image);
-    ///     image.data()
-    /// };
-    /// ```
-    ///
     pub fn data(&self) -> &str {
         unsafe { CStr::from_ptr(zbar_symbol_get_data(**self)).to_str().unwrap() }
     }
@@ -79,34 +62,6 @@ impl  Symbol  {
             y  => Some(y as u32),
         }
     }
-    ///
-    /// ```compile_fail
-    /// use zbars::prelude::*;
-    /// use std::borrow::Cow;
-    ///
-    /// let symbol = {
-    ///     let mut image = ZBarImage::from_owned(1, 1, &Format::from_label(Cow::Borrowed("Y8")), vec![1]).unwrap();
-    ///     let symbols = image.symbols().unwrap();
-    ///     let first = symbols.first_symbol().unwrap();
-    ///     let next = first.next();
-    ///     next
-    /// };
-    /// ```
-    ///
-    /// ```compile_fail
-    /// use zbars::prelude::*;
-    /// use std::borrow::Cow;
-    ///
-    /// let mut scanner = ImageScanner::builder().build().unwrap();
-    ///
-    /// let symbol = {
-    ///     let mut image = ZBarImage::from_owned(1, 1, &Format::from_label(Cow::Borrowed("Y8")), vec![1]).unwrap();
-    ///     let symbols = scanner.scan_image(&mut image).unwrap();
-    ///     let first = symbols.first_symbol().unwrap();
-    ///     let next = first.next();
-    ///     next
-    /// };
-    /// ```
     pub fn next(&self) -> Option<Symbol> { Self::from_raw(unsafe { zbar_symbol_next(**self) }) }
     pub fn components(&self) -> Option<SymbolSet> {
         SymbolSet::from_raw(unsafe { zbar_symbol_get_components(**self) } )
