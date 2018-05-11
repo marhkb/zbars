@@ -1,22 +1,23 @@
 use super::*;
 use symbolset::*;
-use std::{
-    marker::PhantomData,
-    mem,
-};
+use std::mem;
 
-pub struct Symbol<'a, T: 'a>   {
+pub struct Symbol   {
     symbol: *const zbar_symbol_s,
-    phantom: PhantomData<&'a T>,
-
 }
-impl<'a, T: 'a>  Symbol<'a, T>  {
+impl  Symbol  {
     pub fn from_raw(symbol: *const zbar_symbol_s) -> Option<Self> {
-        match symbol.is_null() {
-            true  => None,
-            false => Some(Self { symbol, phantom: PhantomData }),
+        match !symbol.is_null() {
+            true  => {
+                let mut symbol = Self { symbol };
+                symbol.set_ref(1);
+                Some(symbol)
+            },
+            false => None
         }
     }
+    fn set_ref(&mut self, refs: i32) { unsafe { zbar_symbol_ref(**self, refs) } }
+
     pub fn symbol_type(&self) -> ZBarSymbolType {
         unsafe { mem::transmute(zbar_symbol_get_type(**self)) }
     }
@@ -106,12 +107,12 @@ impl<'a, T: 'a>  Symbol<'a, T>  {
     ///     next
     /// };
     /// ```
-    pub fn next(&self) -> Option<Symbol<'a, T>> { Self::from_raw(unsafe { zbar_symbol_next(**self) }) }
-    pub fn components(&self) -> Option<SymbolSet<'a, T>> {
+    pub fn next(&self) -> Option<Symbol> { Self::from_raw(unsafe { zbar_symbol_next(**self) }) }
+    pub fn components(&self) -> Option<SymbolSet> {
         SymbolSet::from_raw(unsafe { zbar_symbol_get_components(**self) } )
     }
     //
-    pub fn first_component(&self) -> Option<Symbol<'a, T>> {
+    pub fn first_component(&self) -> Option<Symbol> {
         Self::from_raw(unsafe { zbar_symbol_first_component(**self) } )
     }
     pub fn symbol_xml(&self) -> &str {
@@ -119,14 +120,23 @@ impl<'a, T: 'a>  Symbol<'a, T>  {
         unimplemented!()
     }
 
-    pub fn polygon(&'a self) -> SymbolPolygon<'a, T> { SymbolPolygon::from(self) }
+    pub fn polygon(&self) -> SymbolPolygon { SymbolPolygon::from(self) }
+}
+
+impl  Deref for Symbol {
+    type Target = *const zbar_symbol_s;
+    fn deref(&self) -> &Self::Target { &self.symbol }
+}
+
+impl Drop for Symbol {
+    fn drop(&mut self) { (*self).set_ref(-1); }
 }
 
 #[cfg(feature = "zbar_fork")]
 pub mod zbar_fork {
     use super::*;
 
-    impl<'a, T: 'a>  Symbol<'a, T>   {
+    impl  Symbol   {
         pub fn configs(&self) -> u32 { unsafe { zbar_symbol_get_configs(**self) } }
         pub fn modifiers(&self) -> ZBarModifier {
             //TODO: zbar.h says a bitmask is returned but zbar_modifier_e is not a bitmask
@@ -136,34 +146,29 @@ pub mod zbar_fork {
     }
 }
 
-impl<'a, T: 'a>  Deref for Symbol<'a, T>  {
-    type Target = *const zbar_symbol_s;
-    fn deref(&self) -> &Self::Target { &self.symbol }
+pub struct SymbolPolygon<'a>   {
+    symbol: &'a Symbol
 }
-
-pub struct SymbolPolygon<'a, T: 'a>   {
-    symbol: &'a Symbol<'a, T>  ,
-}
-impl<'a, T: 'a>  SymbolPolygon<'a, T>  {
+impl<'a> SymbolPolygon<'a> {
     pub fn point(&self, index: u32) -> Option<(u32, u32)> {
         self.symbol.loc_x(index).map(|x| (x, self.symbol.loc_y(index).unwrap()))
     }
-    pub fn iter(&'a self) -> SymbolPolygonIter<'a, T> { self.into() }
+    pub fn iter(&'a self) -> SymbolPolygonIter { self.into() }
 }
-impl<'a, T: 'a>  From<&'a Symbol<'a, T>> for SymbolPolygon<'a, T>  {
-    fn from(symbol: &'a Symbol<'a, T> ) -> Self { Self { symbol } }
+impl<'a> From<&'a Symbol> for SymbolPolygon<'a>  {
+    fn from(symbol: &'a Symbol ) -> Self { Self { symbol } }
 }
 
-pub struct SymbolPolygonIter<'a, T: 'a>   {
-    polygon: &'a SymbolPolygon<'a, T> ,
+pub struct SymbolPolygonIter<'a> {
+    polygon: &'a SymbolPolygon<'a>,
     index: u32,
 }
-impl<'a, T: 'a>  From<&'a SymbolPolygon<'a, T>  > for SymbolPolygonIter<'a, T>   {
-    fn from(polygon: &'a SymbolPolygon<'a, T> ) -> Self {
+impl<'a> From<&'a SymbolPolygon<'a>> for SymbolPolygonIter<'a>   {
+    fn from(polygon: &'a SymbolPolygon ) -> Self {
         SymbolPolygonIter { polygon, index: 0 }
     }
 }
-impl<'a, 'b: 'a, T: 'b> Iterator for SymbolPolygonIter<'a, T>  {
+impl<'a> Iterator for SymbolPolygonIter<'a>  {
     type Item = (u32, u32);
     fn next(&mut self) -> Option<<Self as Iterator>::Item> {
         let next = self.polygon.point(self.index);

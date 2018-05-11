@@ -1,18 +1,23 @@
 use super::*;
 use symbol::*;
-use std::marker::PhantomData;
 
-pub struct SymbolSet<'a, T: 'a> {
+pub struct SymbolSet {
     symbol_set: *const zbar_symbol_set_s,
-    phantom: PhantomData<&'a T>,
 }
-impl<'a, T: 'a>  SymbolSet<'a, T>  {
+impl  SymbolSet  {
     pub fn from_raw(symbol_set: *const zbar_symbol_set_s) -> Option<Self> {
-        match symbol_set.is_null() {
-            true  => None,
-            false => Some(Self { symbol_set, phantom: PhantomData })
+        match !symbol_set.is_null() {
+            true  => {
+                let mut symbol_set = Self { symbol_set };
+                symbol_set.set_ref(1);
+                Some(symbol_set)
+            },
+            false => None,
         }
     }
+
+    fn set_ref(&mut self, refs: i32) { unsafe { zbar_symbol_set_ref(**self, refs) } }
+
     pub fn size(&self) -> i32 { unsafe { zbar_symbol_set_get_size(**self) } }
     /// Returns the first `Symbol` if one is present.
     ///
@@ -61,38 +66,42 @@ impl<'a, T: 'a>  SymbolSet<'a, T>  {
     ///     symbols.first_symbol()
     /// };
     /// ```
-    pub fn first_symbol(&self) -> Option<Symbol<'a, T>> {
+    pub fn first_symbol(&self) -> Option<Symbol> {
         Symbol::from_raw(unsafe { zbar_symbol_set_first_symbol(**self) })
     }
 
-    pub fn iter(&self) -> SymbolIter<'a, T> { self.first_symbol().into() }
+    pub fn iter(&self) -> SymbolIter { self.first_symbol().into() }
 }
 
-impl<'a, T: 'a> Deref for SymbolSet<'a, T> {
+impl Deref for SymbolSet {
     type Target = *const zbar_symbol_set_s;
     fn deref(&self) -> &Self::Target { &self.symbol_set }
+}
+
+impl Drop for SymbolSet {
+    fn drop(&mut self) { self.set_ref(-1) }
 }
 
 #[cfg(feature = "zbar_fork")]
 pub mod zbar_fork {
     use super::*;
 
-    impl<'a, T: 'a> SymbolSet<'a, T>  {
-        pub fn first_symbol_unfiltered(&self) -> Option<Symbol<'a, T>> {
+    impl SymbolSet  {
+        pub fn first_symbol_unfiltered(&self) -> Option<Symbol> {
             Symbol::from_raw(unsafe { zbar_symbol_set_first_unfiltered(**self) })
         }
     }
 }
 
 
-pub struct SymbolIter<'a, T: 'a> {
-    symbol: Option<Symbol<'a, T>>,
+pub struct SymbolIter {
+    symbol: Option<Symbol>,
 }
-impl<'a, T: 'a> From<Option<Symbol<'a, T>>> for SymbolIter<'a, T> {
-    fn from(symbol: Option<Symbol<'a, T>>) -> Self { Self { symbol } }
+impl From<Option<Symbol>> for SymbolIter {
+    fn from(symbol: Option<Symbol>) -> Self { Self { symbol } }
 }
-impl<'a, T: 'a> Iterator for SymbolIter<'a, T> {
-    type Item = Symbol<'a, T>;
+impl Iterator for SymbolIter {
+    type Item = Symbol;
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut next = self.symbol.as_ref().and_then(Symbol::next);

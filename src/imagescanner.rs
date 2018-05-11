@@ -23,10 +23,10 @@ impl ImageScanner {
             zbar_image_scanner_recycle_image(**self, image.map_or(::std::ptr::null_mut(), |i| **i))
         }
     }
-    pub fn results<'a>(&'a self) -> Option<SymbolSet<'a, Self>> {
+    pub fn results(&self) -> Option<SymbolSet> {
         SymbolSet::from_raw(unsafe { zbar_image_scanner_get_results(**self) })
     }
-    pub fn scan_image<'a>(&'a self, image: &'a mut ZBarImage) -> ZBarSimpleResult<SymbolSet<'a, ZBarImage>> {
+    pub fn scan_image(&self, image: &mut ZBarImage) -> ZBarSimpleResult<SymbolSet> {
         let result: i32 = unsafe { zbar_scan_image(**self, **image) };
         match result >= 0 {
             true  => Ok(image.symbols().unwrap()), // symbols can be unwrapped because image is surely scanned
@@ -90,26 +90,6 @@ mod test {
     use super::*;
 
     #[test]
-    fn evil() {
-        let mut image = ZBarImage::from_path("test/qrcode.png").unwrap();
-
-        let scanner = ImageScannerBuilder::new()
-            .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
-            .build()
-            .unwrap();
-        {
-            scanner.scan_image(&mut image).unwrap();
-        }
-
-        {
-            let symbols = scanner.scan_image(&mut image).unwrap();
-            println!("{}", symbols.first_symbol().unwrap().data())
-
-        }
-
-    }
-
-    #[test]
     fn test_qrcode() {
         let mut image = ZBarImage::from_path("test/qrcode.png").unwrap();
 
@@ -141,7 +121,7 @@ mod test {
         assert!(image.first_symbol().is_none());
     }
 
-    fn assert_qrcode<T>(symbol: Symbol<T>) {
+    fn assert_qrcode(symbol: Symbol) {
         assert_eq!(symbol.symbol_type(), ZBarSymbolType::ZBAR_QRCODE);
         assert_eq!(symbol.data(), "https://www.ikimuni.de/");
         assert_eq!(symbol.next().is_none(), true);
@@ -179,7 +159,7 @@ mod test {
         assert!(image.first_symbol().is_none());
     }
 
-    fn assert_code128<T>(symbol: Symbol<T>) {
+    fn assert_code128(symbol: Symbol) {
         assert_eq!(symbol.symbol_type(), ZBarSymbolType::ZBAR_CODE128);
         assert_eq!(symbol.data(), "Screwdriver");
         assert_eq!(symbol.next().is_none(), true);

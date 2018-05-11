@@ -228,7 +228,7 @@ impl<'a> Processor<'a> {
             }
         }
     }
-    pub fn get_results(&'a self) -> Option<SymbolSet<'a, Self>> {
+    pub fn get_results(&self) -> Option<SymbolSet> {
         SymbolSet::from_raw(unsafe { zbar_processor_get_results(**self) })
     }
 
@@ -240,7 +240,7 @@ impl<'a> Processor<'a> {
     pub fn process_one(&self, timeout: i32) -> i32 {
         unsafe { zbar_process_one(**self, timeout) }
     }
-    pub fn process_image<'b>(&self, image: &'b mut ZBarImage) -> ZBarSimpleResult<SymbolSet<'b, ZBarImage<'b>>> {
+    pub fn process_image(&self, image: &mut ZBarImage) -> ZBarSimpleResult<SymbolSet> {
         let result = unsafe { zbar_process_image(**self, **image) };
         match result >= 0 {
             true  => Ok(image.symbols().unwrap()), // symbols can be unwrapped because image is surely scanned

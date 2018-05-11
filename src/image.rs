@@ -200,13 +200,13 @@ impl<'a> ZBarImage<'a> {
     ///     image.symbols()
     /// };
     /// ```
-    pub fn symbols(&'a self) -> Option<SymbolSet<'a, Self>> {
+    pub fn symbols(&self) -> Option<SymbolSet> {
         SymbolSet::from_raw(unsafe { zbar_image_get_symbols(**self) })
     }
-    pub fn set_symbols(&mut self, symbols: Option<&'a SymbolSet<'a, Self>>) {
+    pub fn set_symbols(&mut self, symbols: Option<&SymbolSet>) {
         unsafe { zbar_image_set_symbols(**self, symbols.map_or(::std::ptr::null(), |s| **s)) }
     }
-    pub fn first_symbol(&'a self) -> Option<Symbol<'a, Self>> {
+    pub fn first_symbol(&self) -> Option<Symbol> {
         Symbol::from_raw(unsafe { zbar_image_first_symbol(self.image) })
     }
     pub fn set_sequence(&mut self, sequence_num: u32) {
