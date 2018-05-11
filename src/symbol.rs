@@ -155,13 +155,16 @@ mod test {
     use prelude::*;
 
     #[test]
-    fn test_symbol_xml() {
+    fn test_xml() {
         let mut image = ZBarImage::from_path("test/qrcode.png").unwrap();
         let mut scanner = ImageScanner::builder()
             .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
             .build()
             .unwrap();
 
-        println!("{}", scanner.scan_image(&mut image).unwrap().first_symbol().unwrap().xml());
+        assert_eq!(
+            scanner.scan_image(&mut image).unwrap().first_symbol().unwrap().xml(),
+            "<symbol type='QR-Code' quality='1' orientation='UP'><data><![CDATA[https://www.ikimuni.de/]]></data></symbol>"
+        );
     }
 }
