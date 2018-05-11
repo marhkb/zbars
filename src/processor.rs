@@ -228,7 +228,7 @@ impl<'a> Processor<'a> {
             }
         }
     }
-    pub fn get_results(&self) -> Option<SymbolSet<'a, Self>> {
+    pub fn get_results(&'a self) -> Option<SymbolSet<'a, Self>> {
         SymbolSet::from_raw(unsafe { zbar_processor_get_results(**self) })
     }
 

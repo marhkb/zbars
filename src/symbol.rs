@@ -78,12 +78,40 @@ impl<'a, T: 'a>  Symbol<'a, T>  {
             y  => Some(y as u32),
         }
     }
-    // TODO: live as long as image or processor
+    ///
+    /// ```compile_fail
+    /// use zbars::prelude::*;
+    /// use std::borrow::Cow;
+    ///
+    /// let symbol = {
+    ///     let mut image = ZBarImage::from_owned(1, 1, &Format::from_label(Cow::Borrowed("Y8")), vec![1]).unwrap();
+    ///     let symbols = image.symbols().unwrap();
+    ///     let first = symbols.first_symbol().unwrap();
+    ///     let next = first.next();
+    ///     next
+    /// };
+    /// ```
+    ///
+    /// ```compile_fail
+    /// use zbars::prelude::*;
+    /// use std::borrow::Cow;
+    ///
+    /// let mut scanner = ImageScanner::builder().build().unwrap();
+    ///
+    /// let symbol = {
+    ///     let mut image = ZBarImage::from_owned(1, 1, &Format::from_label(Cow::Borrowed("Y8")), vec![1]).unwrap();
+    ///     let symbols = scanner.scan_image(&mut image).unwrap();
+    ///     let first = symbols.first_symbol().unwrap();
+    ///     let next = first.next();
+    ///     next
+    /// };
+    /// ```
     pub fn next(&self) -> Option<Symbol<'a, T>> { Self::from_raw(unsafe { zbar_symbol_next(**self) }) }
-    pub fn components(&'a self) -> Option<SymbolSet<'a, T>> {
+    pub fn components(&self) -> Option<SymbolSet<'a, T>> {
         SymbolSet::from_raw(unsafe { zbar_symbol_get_components(**self) } )
     }
-    pub fn first_component(&'a self) -> Option<Symbol<'a, T>> {
+    //
+    pub fn first_component(&self) -> Option<Symbol<'a, T>> {
         Self::from_raw(unsafe { zbar_symbol_first_component(**self) } )
     }
     pub fn symbol_xml(&self) -> &str {
@@ -91,7 +119,7 @@ impl<'a, T: 'a>  Symbol<'a, T>  {
         unimplemented!()
     }
 
-    pub fn polygon(&'a self) -> SymbolPolygon<'a, T> { self.into() }
+    pub fn polygon(&'a self) -> SymbolPolygon<'a, T> { SymbolPolygon::from(self) }
 }
 
 #[cfg(feature = "zbar_fork")]

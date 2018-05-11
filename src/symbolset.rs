@@ -61,11 +61,11 @@ impl<'a, T: 'a>  SymbolSet<'a, T>  {
     ///     symbols.first_symbol()
     /// };
     /// ```
-    pub fn first_symbol(&'a self) -> Option<Symbol<'a, T>> {
+    pub fn first_symbol(&self) -> Option<Symbol<'a, T>> {
         Symbol::from_raw(unsafe { zbar_symbol_set_first_symbol(**self) })
     }
 
-    pub fn iter(&'a self) -> SymbolIter<'a, T> { self.first_symbol().into() }
+    pub fn iter(&self) -> SymbolIter<'a, T> { self.first_symbol().into() }
 }
 
 impl<'a, T: 'a> Deref for SymbolSet<'a, T> {
@@ -78,7 +78,7 @@ pub mod zbar_fork {
     use super::*;
 
     impl<'a, T: 'a> SymbolSet<'a, T>  {
-        pub fn first_symbol_unfiltered(&'a self) -> Option<Symbol<'a, T>> {
+        pub fn first_symbol_unfiltered(&self) -> Option<Symbol<'a, T>> {
             Symbol::from_raw(unsafe { zbar_symbol_set_first_unfiltered(**self) })
         }
     }
