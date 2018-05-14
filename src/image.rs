@@ -1,13 +1,13 @@
+use {
+    format::*,
+    symbol::*,
+    symbolset::*,
+};
 use std::{
-    error::Error,
     fmt,
     path::Path,
-    borrow::Cow,
 };
 use super::*;
-use format::*;
-use symbol::*;
-use symbolset::*;
 
 pub type ZBarImageResult<'a> = Result<ZBarImage<'a>, ZBarImageError>;
 
@@ -347,14 +347,12 @@ pub mod from_image {
         /// use zbars::image::ZBarImage;
         /// use image::{DynamicImage, ImageBuffer};
         ///
-        /// fn main() {
-        ///     let image = ZBarImage::from_dyn_image(
-        ///         DynamicImage::ImageLuma8(
-        ///             // small buffer just for demonstration
-        ///             ImageBuffer::from_vec(1, 1, vec![0]).unwrap()
-        ///         )
-        ///     );
-        /// }
+        /// let image = ZBarImage::from_dyn_image(
+        ///     DynamicImage::ImageLuma8(
+        ///         // small buffer just for demonstration
+        ///         ImageBuffer::from_vec(1, 1, vec![0]).unwrap()
+        ///     )
+        /// );
         /// ```
         pub fn from_dyn_image(image: DynamicImage) -> Self {
             ZBarImage::from_owned(
@@ -384,14 +382,12 @@ pub mod from_image {
         /// use zbars::image::ZBarImage;
         /// use image::{DynamicImage, ImageBuffer};
         ///
-        /// fn main() {
-        ///     let image = ZBarImage::from_generic_image(
-        ///         &DynamicImage::ImageRgb8(
-        ///             // small buffer just for demonstration
-        ///             ImageBuffer::from_vec(1, 1, vec![0, 0, 0]).unwrap()
-        ///         )
-        ///     );
-        /// }
+        /// let image = ZBarImage::from_generic_image(
+        ///     &DynamicImage::ImageRgb8(
+        ///         // small buffer just for demonstration
+        ///         ImageBuffer::from_vec(1, 1, vec![0, 0, 0]).unwrap()
+        ///     )
+        /// );
         /// ```
         pub fn from_generic_image<I>(image: &I) -> Self
             where I: GenericImage + 'static,

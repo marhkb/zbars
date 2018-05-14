@@ -1,11 +1,10 @@
 use super::*;
 use symbolset::*;
-use std::mem;
 
 pub struct Symbol   {
     symbol: *const zbar_symbol_s,
 }
-impl  Symbol  {
+impl Symbol  {
     /// Creates a new `SymbolSet` from raw data.
     pub(crate) fn from_raw(symbol: *const zbar_symbol_s) -> Option<Self> {
         match !symbol.is_null() {
@@ -17,7 +16,7 @@ impl  Symbol  {
             false => None
         }
     }
-    /// Increases the reference count.
+    /// Increases or decreases the reference count.
     fn set_ref(&mut self, refs: i32) { unsafe { zbar_symbol_ref(**self, refs) } }
 
     pub fn symbol_type(&self) -> ZBarSymbolType {
@@ -42,7 +41,6 @@ impl  Symbol  {
         unsafe { CStr::from_ptr(zbar_symbol_get_data(**self)).to_str().unwrap() }
     }
     pub fn quality(&self) -> i32 { unsafe { zbar_symbol_get_quality(**self) } }
-    // TODO: Test
     /// Retrieve the current cache count
     pub fn count(&self) -> i32 {
         //TODO: Specify what count is
@@ -66,19 +64,20 @@ impl  Symbol  {
             y  => Some(y as u32),
         }
     }
-    pub fn next(&self) -> Option<Symbol> { Self::from_raw(unsafe { zbar_symbol_next(**self) }) }
-    // TODO: Test
+    fn loc(&self, index: u32) -> Option<(u32, u32)> {
+        self.loc_x(index).map(|x| (x, self.loc_y(index).unwrap()))
+    }
+    pub fn next(&self) -> Option<Self> { Self::from_raw(unsafe { zbar_symbol_next(**self) }) }
     pub fn components(&self) -> Option<SymbolSet> {
         SymbolSet::from_raw(unsafe { zbar_symbol_get_components(**self) } )
     }
-    // TODO: Test
-    pub fn first_component(&self) -> Option<Symbol> {
+    pub fn first_component(&self) -> Option<Self> {
         Self::from_raw(unsafe { zbar_symbol_first_component(**self) } )
     }
     /// Returns a xml representation of the `Symbol`.
     pub fn xml(&self) -> String {
         unsafe {
-            let mut cstr_buf = CString::new("").unwrap();
+            let cstr_buf = CString::new("").unwrap();
             CStr::from_ptr(
                 zbar_symbol_xml(
                     **self,
@@ -89,14 +88,19 @@ impl  Symbol  {
         }
     }
 
-    pub fn polygon(&self) -> SymbolPolygon { SymbolPolygon::from(self) }
+    pub fn polygon(&self) -> Polygon { self.clone().into() }
 }
-
+impl Clone for Symbol {
+    fn clone(&self) -> Self {
+        let mut symbol = Self { symbol: self.symbol };
+        symbol.set_ref(1);
+        symbol
+    }
+}
 impl Deref for Symbol {
     type Target = *const zbar_symbol_s;
     fn deref(&self) -> &Self::Target { &self.symbol }
 }
-
 impl Drop for Symbol {
     fn drop(&mut self) { self.set_ref(-1); }
 }
@@ -105,45 +109,54 @@ impl Drop for Symbol {
 pub mod zbar_fork {
     use super::*;
 
-    impl  Symbol   {
-        // TODO: Test bitmask
+    impl Symbol   {
         pub fn configs(&self) -> u32 { unsafe { zbar_symbol_get_configs(**self) } }
-        // TODO: Test bitmask
-        pub fn modifiers(&self) -> ZBarModifier {
-            //TODO: zbar.h says a bitmask is returned but zbar_modifier_e is not a bitmask
-            unsafe { ::std::mem::transmute(zbar_symbol_get_modifiers(**self)) }
+        pub fn modifiers(&self) -> u32 { unsafe { zbar_symbol_get_modifiers(**self) } }
+        pub fn orientation(&self) -> ZBarOrientation {
+            unsafe { zbar_symbol_get_orientation (**self) }
         }
-        // TODO: Test
-        pub fn orientation(&self) -> ZBarOrientation { unsafe { zbar_symbol_get_orientation (**self) } }
+    }
+
+    #[cfg(test)]
+    mod test {
+        use super::*;
+
+        #[test] fn test_configs() {
+            // TODO: Better testing
+            assert_eq!(create_symbol().configs(), 0);
+        }
+        #[test] fn test_modifiers() {
+            // TODO: Better testing
+            assert_eq!(create_symbol().modifiers(), 0);
+        }
+        #[test] fn orientation() {
+            assert_eq!(create_symbol().orientation(), ZBarOrientation::ZBAR_ORIENT_UP);
+        }
     }
 }
 
-pub struct SymbolPolygon<'a>   {
-    symbol: &'a Symbol
+pub struct Polygon {
+    symbol: Symbol
 }
-impl<'a> SymbolPolygon<'a> {
-    pub fn point(&self, index: u32) -> Option<(u32, u32)> {
-        self.symbol.loc_x(index).map(|x| (x, self.symbol.loc_y(index).unwrap()))
-    }
-    pub fn iter(&'a self) -> SymbolPolygonIter { self.into() }
+impl Polygon {
+    pub fn point(&self, index: u32) -> Option<(u32, u32)> { self.symbol.loc(index) }
+    pub fn iter(&self) -> PolygonIter { self.symbol.clone().into() }
 }
-impl<'a> From<&'a Symbol> for SymbolPolygon<'a>  {
-    fn from(symbol: &'a Symbol ) -> Self { Self { symbol } }
+impl From<Symbol> for Polygon  {
+    fn from(symbol: Symbol) -> Self { Self { symbol } }
 }
 
-pub struct SymbolPolygonIter<'a> {
-    polygon: &'a SymbolPolygon<'a>,
+pub struct PolygonIter {
+    symbol: Symbol,
     index: u32,
 }
-impl<'a> From<&'a SymbolPolygon<'a>> for SymbolPolygonIter<'a>   {
-    fn from(polygon: &'a SymbolPolygon ) -> Self {
-        SymbolPolygonIter { polygon, index: 0 }
-    }
+impl From<Symbol> for PolygonIter   {
+    fn from(symbol: Symbol) -> Self { PolygonIter { symbol, index: 0 } }
 }
-impl<'a> Iterator for SymbolPolygonIter<'a>  {
+impl Iterator for PolygonIter  {
     type Item = (u32, u32);
-    fn next(&mut self) -> Option<<Self as Iterator>::Item> {
-        let next = self.polygon.point(self.index);
+    fn next(&mut self) -> Option<Self::Item> {
+        let next = self.symbol.loc(self.index);
         self.index += 1;
         next
     }
@@ -153,22 +166,105 @@ impl<'a> Iterator for SymbolPolygonIter<'a>  {
 mod test {
     use super::*;
     use prelude::*;
+    use std::path::Path;
 
-    #[test]
-    fn test_xml() {
-        let mut image = ZBarImage::from_path("test/qrcode.png").unwrap();
-        let mut scanner = ImageScanner::builder()
-            .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
-            .build()
-            .unwrap();
+    #[cfg(feature = "zbar_fork")]
+    const XML: &'static str =
+        "<symbol type='QR-Code' quality='1' orientation='UP'>\
+            <data>\
+                <![CDATA[Hello World]]>\
+            </data>\
+        </symbol>";
+    #[cfg(not(feature = "zbar_fork"))]
+    const XML: &'static str =
+        "<symbol type='QR-Code' quality='1'>\
+            <data>\
+                <![CDATA[Hello World]]>\
+            </data>\
+        </symbol>";
 
-        assert_eq!(
-            scanner.scan_image(&mut image).unwrap().first_symbol().unwrap().xml(),
-            if cfg!(feature = "zbar_fork") {
-                "<symbol type='QR-Code' quality='1' orientation='UP'><data><![CDATA[https://www.ikimuni.de/]]></data></symbol>"
-            } else {
-                "<symbol type=\'QR-Code\' quality=\'1\'><data><![CDATA[https://www.ikimuni.de/]]></data></symbol>"
-            }
-        );
+    #[test] fn test_from_raw() { create_symbol(); }
+    #[test] fn test_from_raw_null() { assert!(Symbol::from_raw(ptr::null()).is_none()); }
+    #[test] fn test_symbol_type() {
+        assert_eq!(create_symbol().symbol_type(), ZBarSymbolType::ZBAR_QRCODE);
     }
+    #[test] fn test_data() { assert_eq!(create_symbol().data(), "Hello World"); }
+    #[test] fn test_quality() { assert!(create_symbol().quality() > 0); }
+    #[test] fn test_count() { assert_eq!(create_symbol().count(), 0); }
+    #[test] fn test_loc_size() {
+        assert_eq!(create_symbol().loc_size(), 4);
+    }
+    #[test] fn test_loc_x_y() {
+        let symbol = create_symbol();
+        assert_eq!((symbol.loc_x(0).unwrap(), symbol.loc_y(0).unwrap()), (6, 6));
+        assert_eq!((symbol.loc_x(1).unwrap(), symbol.loc_y(1).unwrap()), (6, 142));
+        assert_eq!((symbol.loc_x(2).unwrap(), symbol.loc_y(2).unwrap()), (142, 142));
+        assert_eq!((symbol.loc_x(3).unwrap(), symbol.loc_y(3).unwrap()), (142, 6));
+        assert!(symbol.loc_x(4).is_none());
+        assert!(symbol.loc_y(4).is_none());
+    }
+    #[test] fn test_loc() {
+        let symbol = create_symbol();
+        assert_eq!(symbol.loc(0).unwrap(), (6, 6));
+        assert_eq!(symbol.loc(1).unwrap(), (6, 142));
+        assert_eq!(symbol.loc(2).unwrap(), (142, 142));
+        assert_eq!(symbol.loc(3).unwrap(), (142, 6));
+        assert!(symbol.loc(4).is_none());
+
+    }
+    #[test] fn test_next() {
+        assert!(create_symbol_set().first_symbol().unwrap().next().is_some());
+    }
+    #[test] fn test_components() {
+        // TODO: Better Test
+        assert!(create_symbol_set().first_symbol().unwrap().components().is_none());
+    }
+    #[test] fn test_first_component() {
+        // TODO: Better Test
+        assert!(create_symbol_set().first_symbol().unwrap().first_component().is_none());
+    }
+    #[test] fn test_xml() { assert_eq!(create_symbol().xml(), XML); }
+    #[test] fn test_polygon() {
+        let polygon = create_symbol().polygon();
+        assert_eq!(polygon.point(0).unwrap(), (6, 6));
+        assert_eq!(polygon.point(1).unwrap(), (6, 142));
+        assert_eq!(polygon.point(2).unwrap(), (142, 142));
+        assert_eq!(polygon.point(3).unwrap(), (142, 6));
+        assert!(polygon.point(4).is_none());
+    }
+    #[test] fn test_polygon_iter() {
+        let mut iter = create_symbol().polygon().iter();
+        assert_eq!(iter.next().unwrap(), (6, 6));
+        assert_eq!(iter.next().unwrap(), (6, 142));
+        assert_eq!(iter.next().unwrap(), (142, 142));
+        assert_eq!(iter.next().unwrap(), (142, 6));
+        assert!(iter.next().is_none());
+    }
+}
+
+#[cfg(test)]
+fn create_symbol() -> Symbol {
+    create_symbol_from("test/qr_hello-world.png").first_symbol().unwrap()
+}
+#[cfg(test)]
+fn create_symbol_set() -> SymbolSet {
+    create_symbol_from("test/greetings.png").symbols().unwrap()
+}
+#[cfg(test)]
+fn create_symbol_from(path: impl AsRef<::std::path::Path>) -> prelude::ZBarImage<'static> {
+    use prelude::{
+        ZBarImage,
+        ImageScanner
+    };
+
+    let mut image = ZBarImage::from_path(&path).unwrap();
+
+    let mut scanner = ImageScanner::builder()
+        .with_cache(true)
+        .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
+        .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 1)
+        .build()
+        .unwrap();
+    scanner.scan_image(&mut image).unwrap();
+    image
 }

@@ -1,11 +1,9 @@
-use format::*;
-use image::ZBarImage;
-use super::*;
-use symbolset::SymbolSet;
-use std::{
-    borrow::Cow,
-    ffi::OsString
+use {
+    format::Format,
+    image::ZBarImage,
+    symbolset::SymbolSet,
 };
+use super::*;
 
 pub struct Processor<'a> {
     processor: *mut zbar_processor_s,
@@ -73,7 +71,7 @@ impl<'a> Processor<'a> {
         unsafe {
             zbar_processor_set_userdata(
                 **self,
-                userdata.as_ref().map_or(std::ptr::null(), |s| s.as_ptr()) as *mut u8 as *mut c_void)
+                userdata.as_ref().map_or(ptr::null(), |s| s.as_ptr()) as *mut u8 as *mut c_void)
         }
         self.userdata = userdata;
     }
@@ -182,7 +180,7 @@ impl<'a> Processor<'a> {
     pub fn process_one(&self, timeout: i32) -> i32 {
         unsafe { zbar_process_one(**self, timeout) }
     }
-    pub fn process_image(&self, image: &mut ZBarImage) -> ZBarSimpleResult<SymbolSet> {
+    pub fn process_image(&mut self, image: &mut ZBarImage) -> ZBarSimpleResult<SymbolSet> {
         let result = unsafe { zbar_process_image(**self, **image) };
         match result >= 0 {
             true  => Ok(image.symbols().unwrap()), // symbols can be unwrapped because image is surely scanned
@@ -301,9 +299,9 @@ mod test {
     #[test]
     #[cfg(feature = "from_image")]
     fn test_scan_image() {
-        let mut image = ZBarImage::from_path("test/qrcode.png").unwrap();
+        let mut image = ZBarImage::from_path("test/qr_hello-world.png").unwrap();
 
-        let processor = Processor::builder()
+        let mut processor = Processor::builder()
             .threaded(true)
             .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
             .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 1)
@@ -315,7 +313,7 @@ mod test {
         let symbol = image.first_symbol().unwrap();
 
         assert_eq!(symbol.symbol_type(), ZBarSymbolType::ZBAR_QRCODE);
-        assert_eq!(symbol.data(), "https://www.ikimuni.de/");
+        assert_eq!(symbol.data(), "Hello World");
         assert_eq!(symbol.next().is_none(), true);
     }
 }

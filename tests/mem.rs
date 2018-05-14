@@ -35,12 +35,12 @@ mod test_mem {
 
     #[test]
     fn test_mem_decode_image() {
-        assert_eq!(loop_decode().first_symbol().unwrap().data(), "https://www.ikimuni.de/")
+        assert_eq!(loop_decode().first_symbol().unwrap().data(), "Hello World")
     }
 
     #[test]
     fn test_symbol_xml() {
-        let mut image = ZBarImage::from_path("test/qrcode.png").unwrap();
+        let mut image = ZBarImage::from_path("test/qr_hello-world.png").unwrap();
         let mut scanner = ImageScanner::builder()
             .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
             .build()
@@ -57,7 +57,7 @@ mod test_mem {
     }
 
     fn loop_decode() -> SymbolSet {
-        let mut image = ZBarImage::from_path("test/qrcode.png").unwrap();
+        let mut image = ZBarImage::from_path("test/qr_hello-world.png").unwrap();
         let mut scanner = ImageScanner::builder()
             .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
             .build()

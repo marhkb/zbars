@@ -4,7 +4,7 @@ use symbol::*;
 pub struct SymbolSet {
     symbol_set: *const zbar_symbol_set_s,
 }
-impl  SymbolSet  {
+impl SymbolSet  {
     /// Creates a new `SymbolSet` from raw data.
     pub(crate) fn from_raw(symbol_set: *const zbar_symbol_set_s) -> Option<Self> {
         match !symbol_set.is_null() {

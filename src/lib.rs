@@ -7,12 +7,16 @@
 extern crate lazy_static;
 
 use std::{
+    borrow::Cow,
     error::Error,
     fmt,
     ffi::{
         CStr,
         CString,
+        OsString,
     },
+    mem,
+    ptr,
     ops::Deref,
     os::raw::c_void,
 };
@@ -68,7 +72,7 @@ impl fmt::Display for ZBarErrorType {
 }
 
 impl From<i32> for ZBarErrorType {
-    fn from(error: i32) -> Self { ZBarErrorType(unsafe { ::std::mem::transmute(error) } ) }
+    fn from(error: i32) -> Self { ZBarErrorType(unsafe { mem::transmute(error) } ) }
 }
 
 pub fn version() -> (u32, u32) {

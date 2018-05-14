@@ -1,7 +1,4 @@
-use std::{
-    borrow::Cow,
-    mem::transmute,
-};
+use super::*;
 
 /// A FOURCC code (https://www.fourcc.org/fourcc.php)
 ///
@@ -56,7 +53,7 @@ impl<'a> Format<'a> {
         Format {
             fourcc,
             label: Cow::Owned(
-                from_utf8(&unsafe { transmute::<_, [u8; 4]>(fourcc) }).unwrap().trim().to_owned()
+                from_utf8(&unsafe { mem::transmute::<_, [u8; 4]>(fourcc) }).unwrap().trim().to_owned()
             ),
         }
     }
@@ -88,7 +85,7 @@ impl<'a> Format<'a> {
                 for i in 0..byte_slice.len() {
                     bytes[i] = byte_slice[i];
                 }
-                unsafe { transmute(bytes) }
+                unsafe { mem::transmute(bytes) }
             },
             label,
         }
