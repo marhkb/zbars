@@ -260,7 +260,7 @@ fn create_symbol_from(path: impl AsRef<::std::path::Path>) -> prelude::ZBarImage
     let mut image = ZBarImage::from_path(&path).unwrap();
 
     let mut scanner = ImageScanner::builder()
-        .with_cache(true)
+        .with_cache(false)
         .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
         .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 1)
         .build()
