@@ -20,7 +20,7 @@ impl<'a> Processor<'a> {
             .unwrap();
         processor
     }
-    pub fn builder<'b>() -> ProcessorBuilder<'b> { ProcessorBuilder::new() }
+    pub fn builder() -> ProcessorBuilder { ProcessorBuilder::new() }
 
     pub fn init(&mut self, video_device: impl AsRef<str>, enable_display: bool) -> ZBarSimpleResult<()> {
         let result = unsafe {
@@ -47,8 +47,8 @@ impl<'a> Processor<'a> {
     pub fn request_iomode(&mut self, iomode: i32) -> i32 {
         unsafe { zbar_processor_request_iomode(**self, iomode) }
     }
-    pub fn force_format(&mut self, input_format: &Format, output_format: &Format) -> i32 {
-        unsafe  { zbar_processor_force_format(**self, input_format.fourcc().into(), output_format.fourcc().into()) }
+    pub fn force_format(&mut self, input_format: Format, output_format: Format) -> i32 {
+        unsafe  { zbar_processor_force_format(**self, input_format.value().into(), output_format.value().into()) }
     }
 
     /// Sets borrowed user data for `Processor`.
@@ -201,15 +201,15 @@ impl<'a> Drop for Processor<'a> {
     fn drop(&mut self) { unsafe { zbar_processor_destroy(**self) } }
 }
 
-pub struct ProcessorBuilder<'a> {
+pub struct ProcessorBuilder {
     threaded: bool,
     size: Option<(u32, u32)>,
     interface_version: Option<i32>,
     iomode: Option<i32>,
-    format: Option<(Format<'a>, Format<'a>)>,
+    format: Option<(Format, Format)>,
     config: Vec<(ZBarSymbolType, ZBarConfig, i32)>,
 }
-impl<'a> ProcessorBuilder<'a> {
+impl ProcessorBuilder {
     pub fn new() -> Self {
         Self {
             threaded: false,
@@ -226,7 +226,7 @@ impl<'a> ProcessorBuilder<'a> {
         self.interface_version = interface_version; self
     }
     pub fn with_iomode(&mut self, iomode: Option<i32>) -> &mut Self { self.iomode = iomode; self }
-    pub fn with_format(&mut self, format: Option<(Format<'a>, Format<'a>)>) -> &mut Self {
+    pub fn with_format(&mut self, format: Option<(Format, Format)>) -> &mut Self {
         self.format = format; self
     }
     pub fn with_config(&mut self, symbol_type: ZBarSymbolType, config: ZBarConfig, value: i32) -> &mut Self {
@@ -244,7 +244,7 @@ impl<'a> ProcessorBuilder<'a> {
             processor.request_iomode(iomode);
         }
         if let Some(ref format) = self.format {
-            processor.force_format(&format.0, &format.1);
+            processor.force_format(format.0, format.1);
         }
         for values in &self.config {
             processor.set_config(values.0, values.1, values.2)?;

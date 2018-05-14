@@ -14,7 +14,7 @@ mod test_mem {
         let mem_before = mem();
         for _ in 0..N {
             ZBarImage::from_owned(
-                500, 500, Format::from_label_borrowed("Y800"), vec![0; 500 * 500]
+                500, 500, Format::from_label("Y800"), vec![0; 500 * 500]
             ).unwrap();
         }
         assert_mem(mem_before, N);
@@ -27,7 +27,7 @@ mod test_mem {
             let buf = vec![0; 500 * 500];
             let buf_slice = buf.as_slice();
             ZBarImage::from_borrowed(
-                500, 500, Format::from_label_borrowed("Y800"), &buf_slice
+                500, 500, Format::from_label("Y800"), &buf_slice
             ).unwrap();
         }
         assert_mem(mem_before, N);

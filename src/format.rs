@@ -14,25 +14,20 @@ use super::*;
 /// use std::borrow::Cow;
 ///
 /// // create Format that borrows the given label
-/// let format = Format::from_label(Cow::Borrowed("Y800"));
-/// println!("{}", format.fourcc());
+/// let format = Format::from_label("Y800");
+/// println!("{}", format.value());
 ///
 /// // create Format that owns the given label
-/// let format = Format::from_label(Cow::Owned(String::from("Y800")));
-/// println!("{}", format.fourcc());
+/// let format = Format::from_label("Y800");
+/// println!("{}", format.value());
 ///
 /// // create Format from FOURCC value
-/// let format = Format::from_fourcc(0x30303859);
-/// println!("{}", format.label());
+/// let format = Format::from_value(0x30303859);
+/// println!("{}", format.as_label());
 /// ```
-#[derive(Debug, Clone)]
-pub struct Format<'a> {
-    /// FOURCC value
-    fourcc: u32,
-    /// FOURCC label (e.g. Y800)
-    label: Cow<'a, str>,
-}
-impl<'a> Format<'a> {
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub struct Format(u32);
+impl Format {
     /// Creates a `Format` from the given FOURCC value.
     ///
     /// # Examples
@@ -42,21 +37,12 @@ impl<'a> Format<'a> {
     /// ```
     /// use zbars::prelude::Format;
     ///
-    /// let format = Format::from_fourcc(0x30303859);
-    /// println!("{}", format.label());
-    /// println!("{}", format.fourcc());
+    /// let format = Format::from_value(0x30303859);
+    /// println!("{}", format.as_label());
+    /// println!("{}", format.value());
     ///
     /// ```
-    pub fn from_fourcc(fourcc: u32) -> Self  {
-        use std::str::from_utf8;
-
-        Format {
-            fourcc,
-            label: Cow::Owned(
-                from_utf8(&unsafe { mem::transmute::<_, [u8; 4]>(fourcc) }).unwrap().trim().to_owned()
-            ),
-        }
-    }
+    pub fn from_value(value: u32) -> Self { Format(value) }
     /// Creates a `Format` from the given FOURCC label and lets `Format` borrow that label.
     ///
     /// # Examples
@@ -68,50 +54,36 @@ impl<'a> Format<'a> {
     /// use std::borrow::Cow;
     ///
     /// // create Format that borrows the given label
-    /// let format = Format::from_label(Cow::Borrowed("Y800"));
-    /// println!("{}", format.label());
-    /// println!("{}", format.fourcc());
+    /// let format = Format::from_label("Y800");
+    /// println!("{}", format.as_label());
+    /// println!("{}", format.value());
     ///
     /// // create Format that owns the given label
-    /// let format = Format::from_label(Cow::Owned(String::from("Y800")));
-    /// println!("{}", format.label());
-    /// println!("{}", format.fourcc());
+    /// let format = Format::from_label("Y800");
+    /// println!("{}", format.as_label());
+    /// println!("{}", format.value());
     /// ```
-    pub fn from_label(label: Cow<'a, str>) -> Self {
-        Format {
-            fourcc: {
-                let byte_slice = label.as_ref().as_bytes();
-                let mut bytes = [32; 4];
-                for i in 0..byte_slice.len() {
-                    bytes[i] = byte_slice[i];
-                }
-                unsafe { mem::transmute(bytes) }
-            },
-            label,
-        }
-    }
-
-    pub fn from_label_owned(label: impl ToString) -> Self {
-        Self::from_label(Cow::Owned(label.to_string()))
-    }
-
-    pub fn from_label_borrowed(label: &'a (impl AsRef<str> + ?Sized)) -> Self {
-        Self::from_label(Cow::Borrowed(label.as_ref()))
+    pub fn from_label(label: impl AsRef<str>) -> Self {
+        Format({
+            let byte_slice = label.as_ref().as_bytes();
+            let mut bytes = [32; 4];
+            for i in 0..byte_slice.len() {
+                bytes[i] = byte_slice[i];
+            }
+            unsafe { mem::transmute(bytes) }
+        })
     }
 
     /// Returns the FOURCC value for this `Format`
-    pub fn fourcc(&self) -> u32 { self.fourcc }
-    /// Returns the FOURCC label for this `Format`
-    pub fn label(&'a self) -> &'a str {
-        match self.label {
-            Cow::Owned(ref label) => label,
-            Cow::Borrowed(label)  => label,
-        }
+    pub fn value(&self) -> u32 { self.0 }
+    pub fn as_label(&self) -> String {
+        std::str::from_utf8(&unsafe { mem::transmute::<_, [u8; 4]>(*self) })
+            .unwrap().trim().to_owned()
     }
-
 }
-impl<'a> PartialEq for Format<'a> {
-    fn eq(&self, other: &Self) -> bool { self.fourcc == other.fourcc }
+impl Deref for Format {
+    type Target = u32;
+    fn deref(&self) -> &Self::Target { &self.0 }
 }
 
 #[cfg(test)]
@@ -119,39 +91,33 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_from_fourcc() {
-        assert_eq!(Format::from_fourcc(0x564E5559).label(), "YUNV");
-        assert_eq!(Format::from_fourcc(0x564E5559).fourcc(), 0x564E5559);
-        assert_eq!(Format::from_fourcc(0x20203859).label(), "Y8");
-        assert_eq!(Format::from_fourcc(0x20203859).fourcc(), 0x20203859);
+    fn test_from_value() {
+        assert_eq!(Format::from_value(0x564E5559).as_label(), "YUNV");
+        assert_eq!(Format::from_value(0x564E5559).value(), 0x564E5559);
+        assert_eq!(Format::from_value(0x20203859).as_label(), "Y8");
+        assert_eq!(Format::from_value(0x20203859).value(), 0x20203859);
     }
 
     #[test]
     fn test_from_label() {
-        assert_eq!(Format::from_label(Cow::Borrowed("YUNV")).fourcc(), 0x564E5559);
-        assert_eq!(Format::from_label(Cow::Owned("Y8".into())).fourcc(), 0x20203859);
+        assert_eq!(Format::from_label("YUNV").value(), 0x564E5559);
+        assert_eq!(Format::from_label("Y8").value(), 0x20203859);
 
     }
 
     #[test]
     fn test_label() {
-        assert_eq!(Format::from_label(Cow::Borrowed("YUNV")).label(), "YUNV");
+        assert_eq!(Format::from_label("YUNV").as_label(), "YUNV");
     }
 
     #[test]
-    fn test_fourcc() {
-        assert_eq!(Format::from_fourcc(0x564E5559).fourcc(), 0x564E5559);
+    fn test_value() {
+        assert_eq!(Format::from_value(0x564E5559).value(), 0x564E5559);
     }
 
     #[test]
     fn test_eq() {
-        assert_eq!(Format::from_label(Cow::Borrowed("YUNV")),
-                   Format::from_label(Cow::Borrowed("YUNV")));
-        assert_eq!(Format::from_label(Cow::Borrowed("YUNV")),
-                   Format::from_label(Cow::Owned("YUNV".into())));
-        assert_eq!(Format::from_label(Cow::Borrowed("YUNV")),
-                   Format::from_fourcc(0x564E5559));
-        assert_eq!(Format::from_label(Cow::Owned("YUNV".into())),
-                   Format::from_fourcc(0x564E5559));
+        assert_eq!(Format::from_label("YUNV"), Format::from_label("YUNV"));
+        assert_eq!(Format::from_label("YUNV"), Format::from_value(0x564E5559));
     }
 }

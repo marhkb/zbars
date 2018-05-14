@@ -29,7 +29,7 @@ impl Symbol  {
     /// ```
     /// use zbars::prelude::*;
     ///
-    /// let mut image = ZBarImage::from_owned(1, 1, Format::from_label_borrowed("Y8"), vec![1]).unwrap();
+    /// let mut image = ZBarImage::from_owned(1, 1, Format::from_label("Y8"), vec![1]).unwrap();
     /// let mut scanner = ImageScanner::builder().build().unwrap();
     /// if let Ok(symbol_set) = scanner.scan_image(&mut image) {
     ///     if let Some(symbol) = symbol_set.first_symbol() {
@@ -165,8 +165,6 @@ impl Iterator for PolygonIter  {
 #[cfg(test)]
 mod test {
     use super::*;
-    use prelude::*;
-    use std::path::Path;
 
     #[cfg(feature = "zbar_fork")]
     const XML: &'static str =
