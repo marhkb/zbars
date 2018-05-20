@@ -18,7 +18,10 @@ use std::{
     mem,
     ptr,
     ops::Deref,
-    os::raw::c_void,
+    os::raw::{
+        c_char,
+        c_void
+    },
 };
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
@@ -92,28 +95,51 @@ pub fn increase_verbosity() {
 }
 
 pub fn symbol_name(symbol_type: ZBarSymbolType) -> &'static str {
-    unsafe { CStr::from_ptr(zbar_get_symbol_name(symbol_type)).to_str().unwrap() }
+    unsafe { from_cstr(zbar_get_symbol_name(symbol_type)) }
 }
 
 #[cfg(feature = "zbar_fork")]
 pub fn config_name(config: ZBarConfig) -> &'static str {
-    unsafe { CStr::from_ptr(zbar_get_config_name(config)).to_str().unwrap() }
+    unsafe { from_cstr(zbar_get_config_name(config)) }
 }
 
 #[cfg(feature = "zbar_fork")]
 pub fn modifier_name(modifier: ZBarModifier) -> &'static str {
-    unsafe { CStr::from_ptr(zbar_get_modifier_name(modifier)).to_str().unwrap() }
+    unsafe { from_cstr(zbar_get_modifier_name(modifier)) }
 }
 
 #[cfg(feature = "zbar_fork")]
 pub fn orientation_name(orientation: ZBarOrientation) -> &'static str {
-    unsafe { CStr::from_ptr(zbar_get_orientation_name(orientation)).to_str().unwrap() }
+    unsafe { from_cstr(zbar_get_orientation_name(orientation)) }
 }
 
-pub fn parse_config() {
+pub fn parse_config(config_string: impl AsRef<str>) -> ZBarSimpleResult<(ZBarSymbolType, ZBarConfig, i32)> {
+    unsafe {
+        let mut symbol_type = ZBarSymbolType::ZBAR_NONE;
+        let mut config = ZBarConfig::ZBAR_CFG_ENABLE;
+        let mut value = 0;
 
+        match zbar_parse_config(
+            as_char_ptr(config_string),
+            &mut symbol_type as *mut ZBarSymbolType,
+            &mut config as *mut ZBarConfig,
+            &mut value as *mut i32,
+        ) {
+            0 => Ok((symbol_type, config, value)),
+            e => Err(e)
+        }
+
+    }
 }
 //pub fn addon_name()
+
+unsafe fn as_char_ptr(value: impl AsRef<str>) -> *const i8 {
+    OsString::from(value.as_ref()).to_str().unwrap().as_ptr() as *const i8
+}
+
+unsafe fn from_cstr(ptr: *const c_char) -> &'static str {
+    CStr::from_ptr(ptr).to_str().unwrap()
+}
 
 #[cfg(test)]
 mod test {
@@ -129,5 +155,18 @@ mod test {
     fn test_symbol_name() {
         assert_eq!(symbol_name(ZBarSymbolType::ZBAR_QRCODE), "QR-Code");
         assert_eq!(symbol_name(ZBarSymbolType::ZBAR_CODE128), "CODE-128");
+    }
+
+    #[test]
+    fn test_parse_config() {
+        assert_eq!(
+            parse_config("qrcode.enable=1").unwrap(),
+            (ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
+        );
+    }
+
+    #[test]
+    fn test_parse_config_err() {
+        assert!(parse_config("Not valid").is_err());
     }
 }

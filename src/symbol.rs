@@ -37,9 +37,7 @@ impl Symbol  {
     ///     }
     /// };
     /// ```
-    pub fn data(&self) -> &str {
-        unsafe { CStr::from_ptr(zbar_symbol_get_data(**self)).to_str().unwrap() }
-    }
+    pub fn data(&self) -> &str { unsafe { from_cstr(zbar_symbol_get_data(**self)) } }
     pub fn quality(&self) -> i32 { unsafe { zbar_symbol_get_quality(**self) } }
     /// Retrieve the current cache count
     pub fn count(&self) -> i32 {
@@ -75,16 +73,16 @@ impl Symbol  {
         Self::from_raw(unsafe { zbar_symbol_first_component(**self) } )
     }
     /// Returns a xml representation of the `Symbol`.
-    pub fn xml(&self) -> String {
+    pub fn xml(&self) -> &str {
         unsafe {
             let cstr_buf = CString::new("").unwrap();
-            CStr::from_ptr(
+            from_cstr(
                 zbar_symbol_xml(
                     **self,
                     cstr_buf.as_ptr() as *mut *mut i8,
                     &mut 0_u32 as *mut u32
                 )
-            ).to_str().unwrap().to_owned()
+            )
         }
     }
 

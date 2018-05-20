@@ -23,16 +23,9 @@ impl<'a> Processor<'a> {
     pub fn builder() -> ProcessorBuilder { ProcessorBuilder::new() }
 
     pub fn init(&mut self, video_device: impl AsRef<str>, enable_display: bool) -> ZBarSimpleResult<()> {
-        let result = unsafe {
-            zbar_processor_init(
-                **self,
-                OsString::from(video_device.as_ref()).to_str().unwrap().as_ptr() as *const i8,
-                enable_display as i32
-            )
-        };
-        match result == 0 {
-            true  => Ok(()),
-            false => Err(result),
+        match unsafe { zbar_processor_init(**self, as_char_ptr(video_device), enable_display as i32) } {
+            0 => Ok(()),
+            e => Err(e),
         }
     }
     //TODO: bool or Result?
@@ -98,12 +91,9 @@ impl<'a> Processor<'a> {
     /// ```
     pub fn userdata(&self) -> Option<&Cow<'a, [u8]>> { self.userdata.as_ref() }
     pub fn set_config(&mut self, symbol_type: ZBarSymbolType, config: ZBarConfig, value: i32) -> ZBarResult<()> {
-        let result = unsafe {
-            zbar_processor_set_config(**self, symbol_type, config, value)
-        };
-        match result == 0 {
-            true  => Ok(()),
-            false => Err(result.into())
+        match unsafe { zbar_processor_set_config(**self, symbol_type, config, value) }  {
+            0 => Ok(()),
+            e => Err(e.into())
         }
     }
     pub fn set_control(&mut self, control_name: impl AsRef<str>, value: i32) -> ZBarSimpleResult<()> {
@@ -139,33 +129,24 @@ impl<'a> Processor<'a> {
 //        }
     }
     pub fn is_visible(&self) -> ZBarSimpleResult<bool> {
-        let result = unsafe { zbar_processor_is_visible(**self) };
-        match result > 0 {
-            true  => Ok(true),
-            false => match result == 0 {
-                true  => Ok(false),
-                false => Err(result),
-            }
+        match unsafe { zbar_processor_is_visible(**self) } {
+            0 => Ok(false),
+            1 => Ok(true),
+            e => Err(e),
         }
     }
     pub fn set_visible(&mut self, visible: bool) -> ZBarSimpleResult<bool> {
-        let result = unsafe { zbar_processor_set_visible(**self, visible as i32) };
-        match result > 0 {
-            true  => Ok(true),
-            false => match result == 0 {
-                true  => Ok(false),
-                false => Err(result),
-            }
+        match unsafe { zbar_processor_set_visible(**self, visible as i32) } {
+            0 => Ok(false),
+            1 => Ok(true),
+            e => Err(e),
         }
     }
     pub fn set_active(&mut self, active: bool) -> ZBarSimpleResult<bool> {
-        let result = unsafe { zbar_processor_set_active(**self, active as i32) };
-        match result > 0 {
-            true  => Ok(true),
-            false => match result == 0 {
-                true  => Ok(false),
-                false => Err(result),
-            }
+        match unsafe { zbar_processor_set_active(**self, active as i32) } {
+            0 => Ok(false),
+            1 => Ok(true),
+            e => Err(e),
         }
     }
     pub fn get_results(&self) -> Option<SymbolSet> {

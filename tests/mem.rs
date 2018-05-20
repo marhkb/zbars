@@ -50,7 +50,8 @@ mod test_mem {
         let mem_before = mem();
 
         for _ in 0..N*10 {
-            let xml = symbols.first_symbol().unwrap().xml();
+            let symbol = symbols.first_symbol().unwrap();
+            let xml = symbol.xml();
         }
 
         assert_mem(mem_before, N);

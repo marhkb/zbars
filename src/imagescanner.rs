@@ -11,10 +11,9 @@ impl ImageScanner {
     pub fn new() -> Self { Self::default() }
     pub fn builder() -> ImageScannerBuilder { ImageScannerBuilder::new() }
     pub fn set_config(&mut self, symbol_type: ZBarSymbolType, config: ZBarConfig, value: i32) -> ZBarResult<()> {
-        let result = unsafe { zbar_image_scanner_set_config(**self, symbol_type, config, value) };
-        match result == 0 {
-            true  => Ok(()),
-            false => Err(result.into())
+        match unsafe { zbar_image_scanner_set_config(**self, symbol_type, config, value) } {
+            0 => Ok(()),
+            e => Err(e.into())
         }
     }
     pub fn enable_cache(&mut self, enable: bool) {

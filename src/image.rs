@@ -199,13 +199,7 @@ impl<'a> ZBarImage<'a> {
     pub fn userdata(&self) -> Option<&Cow<'a, [u8]>> { self.userdata.as_ref() }
     /// Writes image on `ZBar format` to the given path.
     pub fn write(&self, path: impl AsRef<Path>) -> ZBarResult<()> {
-        let result = unsafe {
-            zbar_image_write(
-                **self,
-                path.as_ref().as_os_str().to_str().unwrap().as_bytes().as_ptr() as *mut i8,
-            )
-        };
-        match result {
+        match unsafe { zbar_image_write(**self, as_char_ptr(path.as_ref().to_str().unwrap())) } {
             0 => Ok(()),
             e => Err(e.into()),
         }
