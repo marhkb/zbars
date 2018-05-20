@@ -21,9 +21,7 @@ impl ImageScanner {
         unsafe { zbar_image_scanner_enable_cache(**self, enable as i32); }
     }
     pub fn recycle_image(&mut self, image: Option<&mut ZBarImage>) {
-        unsafe {
-            zbar_image_scanner_recycle_image(**self, image.map_or(ptr::null_mut(), |i| **i))
-        }
+        unsafe { zbar_image_scanner_recycle_image(**self, image.map_or(ptr::null_mut(), |i| **i)) }
     }
     pub fn results(&self) -> Option<SymbolSet> {
         SymbolSet::from_raw(unsafe { zbar_image_scanner_get_results(**self) })
@@ -31,7 +29,8 @@ impl ImageScanner {
     pub fn scan_image(&mut self, image: &mut ZBarImage) -> ZBarSimpleResult<SymbolSet> {
         let result: i32 = unsafe { zbar_scan_image(**self, **image) };
         match result >= 0 {
-            true  => Ok(image.symbols().unwrap()), // symbols can be unwrapped because image is surely scanned
+            // symbols can be unwrapped because image is surely scanned
+            true  => Ok(image.symbols().unwrap()),
             false => Err(result),
         }
     }

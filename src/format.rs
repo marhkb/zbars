@@ -76,14 +76,17 @@ impl Format {
 
     /// Returns the FOURCC value for this `Format`
     pub fn value(&self) -> u32 { self.0 }
-    pub fn as_label(&self) -> String {
-        std::str::from_utf8(&unsafe { mem::transmute::<_, [u8; 4]>(*self) })
-            .unwrap().trim().to_owned()
-    }
+    pub fn as_label(&self) -> String { self.to_string() }
 }
 impl Deref for Format {
     type Target = u32;
     fn deref(&self) -> &Self::Target { &self.0 }
+}
+impl ToString for Format {
+    fn to_string(&self) -> String {
+        std::str::from_utf8(&unsafe { mem::transmute::<_, [u8; 4]>(*self) })
+            .unwrap().trim().to_owned()
+    }
 }
 
 #[cfg(test)]
