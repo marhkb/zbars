@@ -26,7 +26,7 @@ impl ImageScanner {
         SymbolSet::from_raw(unsafe { zbar_image_scanner_get_results(**self) })
     }
     pub fn scan_image(&mut self, image: &mut ZBarImage) -> ZBarSimpleResult<SymbolSet> {
-        let result: i32 = unsafe { zbar_scan_image(**self, **image) };
+        let result = unsafe { zbar_scan_image(**self, **image) };
         match result >= 0 {
             // symbols can be unwrapped because image is surely scanned
             true  => Ok(image.symbols().unwrap()),
