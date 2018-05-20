@@ -136,7 +136,7 @@ impl<'a> ZBarImage<'a> {
         SymbolSet::from_raw(unsafe { zbar_image_get_symbols(**self) })
     }
     pub fn set_symbols(&mut self, symbols: Option<&SymbolSet>) {
-        unsafe { zbar_image_set_symbols(**self, symbols.map_or(::std::ptr::null(), |s| **s)) }
+        unsafe { zbar_image_set_symbols(**self, symbols.map_or(ptr::null(), |s| **s)) }
     }
     pub fn first_symbol(&self) -> Option<Symbol> {
         Symbol::from_raw(unsafe { zbar_image_first_symbol(self.image) })
