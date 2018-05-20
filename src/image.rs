@@ -47,7 +47,9 @@ impl<'a> ZBarImage<'a> {
                     (data.len() as u32).into(),
                     None
                 );
-                Ok(Self { image, data, userdata: None })
+                let mut image = Self { image, data, userdata: None };
+                image.set_ref(1);
+                Ok(image)
             }
             false => Err(ZBarImageError::Len(width, height, data.len()))
         }
@@ -84,6 +86,11 @@ impl<'a> ZBarImage<'a> {
     {
         Self::new(width, height, format, Cow::Borrowed(data.as_ref()))
     }
+
+    fn set_ref(&mut self, refs: i32) {
+        unsafe { zbar_image_ref(**self, refs) }
+    }
+
     /// Returns the `Format` of the pixels.
     pub fn format(&self) -> Format {
         unsafe { Format::from_value(zbar_image_get_format(**self) as u32) }
@@ -222,12 +229,11 @@ impl<'a> Deref for ZBarImage<'a> {
     fn deref(&self) -> &Self::Target { &self.image }
 }
 impl<'a> Drop for ZBarImage<'a> {
-    fn drop(&mut self) { unsafe { zbar_image_destroy(**self) } }
+    fn drop(&mut self) { self.set_ref(-1); }
 }
 
 #[cfg(feature = "zbar_fork")]
 pub mod zbar_fork {
-
     use super::*;
 
     impl<'a> ZBarImage<'a> {

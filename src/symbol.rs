@@ -123,14 +123,14 @@ pub mod zbar_fork {
 
         #[test] fn test_configs() {
             // TODO: Better testing
-            assert_eq!(create_symbol().configs(), 0);
+            assert_eq!(create_symbol_en().configs(), 0);
         }
         #[test] fn test_modifiers() {
             // TODO: Better testing
-            assert_eq!(create_symbol().modifiers(), 0);
+            assert_eq!(create_symbol_en().modifiers(), 0);
         }
         #[test] fn orientation() {
-            assert_eq!(create_symbol().orientation(), ZBarOrientation::ZBAR_ORIENT_UP);
+            assert_eq!(create_symbol_en().orientation(), ZBarOrientation::ZBAR_ORIENT_UP);
         }
     }
 }
@@ -181,19 +181,19 @@ mod test {
             </data>\
         </symbol>";
 
-    #[test] fn test_from_raw() { create_symbol(); }
+    #[test] fn test_from_raw() { create_symbol_en(); }
     #[test] fn test_from_raw_null() { assert!(Symbol::from_raw(ptr::null()).is_none()); }
     #[test] fn test_symbol_type() {
-        assert_eq!(create_symbol().symbol_type(), ZBarSymbolType::ZBAR_QRCODE);
+        assert_eq!(create_symbol_en().symbol_type(), ZBarSymbolType::ZBAR_QRCODE);
     }
-    #[test] fn test_data() { assert_eq!(create_symbol().data(), "Hello World"); }
-    #[test] fn test_quality() { assert!(create_symbol().quality() > 0); }
-    #[test] fn test_count() { assert_eq!(create_symbol().count(), 0); }
+    #[test] fn test_data() { assert_eq!(create_symbol_en().data(), "Hello World"); }
+    #[test] fn test_quality() { assert!(create_symbol_en().quality() > 0); }
+    #[test] fn test_count() { assert_eq!(create_symbol_en().count(), 0); }
     #[test] fn test_loc_size() {
-        assert_eq!(create_symbol().loc_size(), 4);
+        assert_eq!(create_symbol_en().loc_size(), 4);
     }
     #[test] fn test_loc_x_y() {
-        let symbol = create_symbol();
+        let symbol = create_symbol_en();
         assert_eq!((symbol.loc_x(0).unwrap(), symbol.loc_y(0).unwrap()), (6, 6));
         assert_eq!((symbol.loc_x(1).unwrap(), symbol.loc_y(1).unwrap()), (6, 142));
         assert_eq!((symbol.loc_x(2).unwrap(), symbol.loc_y(2).unwrap()), (142, 142));
@@ -202,7 +202,7 @@ mod test {
         assert!(symbol.loc_y(4).is_none());
     }
     #[test] fn test_loc() {
-        let symbol = create_symbol();
+        let symbol = create_symbol_en();
         assert_eq!(symbol.loc(0).unwrap(), (6, 6));
         assert_eq!(symbol.loc(1).unwrap(), (6, 142));
         assert_eq!(symbol.loc(2).unwrap(), (142, 142));
@@ -211,19 +211,21 @@ mod test {
 
     }
     #[test] fn test_next() {
-        assert!(create_symbol_set().first_symbol().unwrap().next().is_some());
+        let symbol = create_symbol_multi();
+        assert!(symbol.next().is_some());
+        assert!(symbol.next().unwrap().next().is_none());
     }
     #[test] fn test_components() {
         // TODO: Better Test
-        assert!(create_symbol_set().first_symbol().unwrap().components().is_none());
+        assert!(create_symbol_multi().components().is_none());
     }
     #[test] fn test_first_component() {
         // TODO: Better Test
-        assert!(create_symbol_set().first_symbol().unwrap().first_component().is_none());
+        assert!(create_symbol_multi().first_component().is_none());
     }
-    #[test] fn test_xml() { assert_eq!(create_symbol().xml(), XML); }
+    #[test] fn test_xml() { assert_eq!(create_symbol_en().xml(), XML); }
     #[test] fn test_polygon() {
-        let polygon = create_symbol().polygon();
+        let polygon = create_symbol_en().polygon();
         assert_eq!(polygon.point(0).unwrap(), (6, 6));
         assert_eq!(polygon.point(1).unwrap(), (6, 142));
         assert_eq!(polygon.point(2).unwrap(), (142, 142));
@@ -231,7 +233,7 @@ mod test {
         assert!(polygon.point(4).is_none());
     }
     #[test] fn test_polygon_iter() {
-        let mut iter = create_symbol().polygon().iter();
+        let mut iter = create_symbol_en().polygon().iter();
         assert_eq!(iter.next().unwrap(), (6, 6));
         assert_eq!(iter.next().unwrap(), (6, 142));
         assert_eq!(iter.next().unwrap(), (142, 142));
@@ -241,15 +243,15 @@ mod test {
 }
 
 #[cfg(test)]
-fn create_symbol() -> Symbol {
-    create_symbol_from("test/qr_hello-world.png").first_symbol().unwrap()
+fn create_symbol_en() -> Symbol {
+    create_symbol_set_from("test/qr_hello-world.png").first_symbol().unwrap()
 }
 #[cfg(test)]
-fn create_symbol_set() -> SymbolSet {
-    create_symbol_from("test/greetings.png").symbols().unwrap()
+fn create_symbol_multi() -> Symbol {
+    create_symbol_set_from("test/greetings.png").first_symbol().unwrap()
 }
 #[cfg(test)]
-fn create_symbol_from(path: impl AsRef<::std::path::Path>) -> prelude::ZBarImage<'static> {
+fn create_symbol_set_from(path: impl AsRef<::std::path::Path>) -> SymbolSet{
     use prelude::{
         ZBarImage,
         ImageScanner
@@ -263,6 +265,5 @@ fn create_symbol_from(path: impl AsRef<::std::path::Path>) -> prelude::ZBarImage
         .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 1)
         .build()
         .unwrap();
-    scanner.scan_image(&mut image).unwrap();
-    image
+    scanner.scan_image(&mut image).unwrap()
 }

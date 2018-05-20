@@ -107,8 +107,7 @@ mod test {
         assert_eq!(create_symbol_set().first_symbol().unwrap().data(), "Hello World");
     }
     #[test] fn test_iter() {
-        let symbols = create_symbol_set();
-        let mut iter = symbols.iter();
+        let mut iter = create_symbol_set().iter();
         assert_eq!(iter.next().unwrap().data(), "Hello World");
         assert_eq!(iter.next().unwrap().data(), "Hallo Welt");
         assert!(iter.next().is_none());
@@ -116,9 +115,7 @@ mod test {
 }
 
 #[cfg(test)]
-fn create_symbol_set() -> SymbolSet {
-    create_symbol_from("test/greetings.png").symbols().unwrap()
-}
+fn create_symbol_set() -> SymbolSet { create_symbol_from("test/greetings.png").symbols().unwrap() }
 #[cfg(test)]
 fn create_symbol_from(path: impl AsRef<::std::path::Path>) -> prelude::ZBarImage<'static> {
     use prelude::{
