@@ -71,7 +71,7 @@ impl ImageScannerBuilder {
     }
     pub fn with_cache(&mut self, cache: bool) -> &mut Self { self.cache = cache; self }
 
-    pub fn build<'a>(&self) -> ZBarResult<ImageScanner> {
+    pub fn build(&self) -> ZBarResult<ImageScanner> {
         let mut scanner = ImageScanner::new();
         scanner.enable_cache(self.cache);
         for values in &self.config {
