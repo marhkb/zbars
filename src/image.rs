@@ -23,7 +23,12 @@ impl fmt::Display for ZBarImageError {
         use self::ZBarImageError::*;
 
         match *self {
-            Len(w, h, l) => write!(f, "Width and height don't match actual data length => width: {}; height: {}; actual data length: {}", w, h, l)
+            Len(w, h, l) => write!(
+                f,
+                "Width and height don't match actual data length\
+                 => width: {}; height: {}; actual data length: {}",
+                w, h, l
+            )
         }
     }
 }
@@ -35,7 +40,8 @@ pub struct ZBarImage<'a> {
     userdata: Option<Cow<'a, [u8]>>,
 }
 impl<'a> ZBarImage<'a> {
-    pub fn new(width: u32, height: u32, format: Format, data: Cow<'a, [u8]>) -> ZBarImageResult<'a> {
+    pub fn new(width: u32, height: u32, format: Format, data: Cow<'a, [u8]>) -> ZBarImageResult<'a>
+    {
         match width as usize * height as usize == data.len() {
             true => unsafe {
                 let image = zbar_image_create();
@@ -66,7 +72,8 @@ impl<'a> ZBarImage<'a> {
     /// // only data of length 1 for demonstration
     /// ZBarImage::from_owned(1, 1, Format::from_label("Y8"), vec![1]).unwrap();
     /// ```
-    pub fn from_owned(width: u32, height: u32, format: Format, data: Vec<u8>) -> ZBarImageResult<'a> {
+    pub fn from_owned(width: u32, height: u32, format: Format, data: Vec<u8>) -> ZBarImageResult<'a>
+    {
         Self::new(width, height, format, Cow::Owned(data))
     }
 
@@ -169,7 +176,7 @@ impl<'a> ZBarImage<'a> {
         unsafe {
             zbar_image_set_userdata(
                 **self,
-                userdata.as_ref().map_or(std::ptr::null(), |s| s.as_ptr()) as *mut u8 as *mut c_void)
+                userdata.as_ref().map_or(std::ptr::null(), |s| s.as_ptr()) as *mut c_void)
         }
         self.userdata = userdata;
     }

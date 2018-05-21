@@ -9,6 +9,7 @@ pub fn main() {
         .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
         //enable code128 decoding
         .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 1)
+        .with_config(ZBarSymbolType::ZBAR_EAN13, ZBarConfig::ZBAR_CFG_ENABLE, 1)
         .build()
         .unwrap();
 
