@@ -28,20 +28,40 @@ impl<'a> Processor<'a> {
             e => Err(e),
         }
     }
-    //TODO: bool or Result?
-    pub fn request_size(&mut self, width: u32, height: u32) -> i32 {
-        unsafe { zbar_processor_request_size(**self, width, height) }
+    //Tested
+    pub fn request_size(&mut self, width: u32, height: u32) -> ZBarSimpleResult<()> {
+        match unsafe { zbar_processor_request_size(**self, width, height) } {
+            0 => Ok(()),
+            e => Err(e),
+        }
     }
-    //TODO: bool or Result?
-    pub fn request_interface(&mut self, version: i32) -> i32 {
-        unsafe { zbar_processor_request_interface(**self, version) }
+    //Tested
+    pub fn request_interface(&mut self, version: i32) -> ZBarSimpleResult<()> {
+        match unsafe { zbar_processor_request_interface(**self, version) } {
+            0 => Ok(()),
+            e => Err(e),
+        }
     }
-    //TODO: bool or Result?
-    pub fn request_iomode(&mut self, iomode: i32) -> i32 {
-        unsafe { zbar_processor_request_iomode(**self, iomode) }
+    //Tested
+    pub fn request_iomode(&mut self, iomode: i32) -> ZBarSimpleResult<()> {
+        match unsafe { zbar_processor_request_iomode(**self, iomode) } {
+            0 => Ok(()),
+            e => Err(e),
+        }
     }
-    pub fn force_format(&mut self, input_format: Format, output_format: Format) -> i32 {
-        unsafe  { zbar_processor_force_format(**self, input_format.value().into(), output_format.value().into()) }
+    pub fn force_format(&mut self, input_format: Format, output_format: Format)
+        -> ZBarSimpleResult<()>
+    {
+        match unsafe  {
+            zbar_processor_force_format(
+                **self,
+                input_format.value().into(),
+                output_format.value().into()
+            )
+        } {
+            0 => Ok(()),
+            e => Err(e),
+        }
     }
 
     /// Sets borrowed user data for `Processor`.
@@ -96,38 +116,7 @@ impl<'a> Processor<'a> {
             e => Err(e.into())
         }
     }
-    pub fn set_control(&mut self, control_name: impl AsRef<str>, value: i32) -> ZBarSimpleResult<()> {
-        //TODO
-        unimplemented!("TBD")
-//        let result = unsafe {
-//            zbar_processor_set_control(
-//                **self,
-//                OsString::from(control_name.as_ref()).to_str().unwrap().as_ptr() as *const i8,
-//                value
-//            )
-//        };
-//        println!("{}", result);
-//        match result == 0 {
-//            true  => Ok(()),
-//            false => Err(result),
-//        }
-    }
-    pub fn get_control(&self, control_name: impl AsRef<str>) -> ZBarResult<i32> {
-        //TODO
-        unimplemented!("TBD")
-//        let mut value = 0;
-//        let result = unsafe {
-//            zbar_processor_get_control(
-//                **self,
-//                control_name.as_ref().as_ptr() as *const i8,
-//                &mut value as *mut i32
-//            )
-//        };
-//        match result == 0 {
-//            true  => Ok(value),
-//            false => Err(result.into()),
-//        }
-    }
+
     pub fn is_visible(&self) -> ZBarSimpleResult<bool> {
         match unsafe { zbar_processor_is_visible(**self) } {
             0 => Ok(false),
@@ -153,19 +142,28 @@ impl<'a> Processor<'a> {
         SymbolSet::from_raw(unsafe { zbar_processor_get_results(**self) })
     }
 
-    //TODO: special type as return
-    pub fn user_wait(&self, timeout: i32) -> i32 {
-        unsafe { zbar_processor_user_wait(**self, timeout) }
+    // Tested
+    pub fn user_wait(&self, timeout: i32) -> ZBarSimpleResult<i32> {
+        match unsafe { zbar_processor_user_wait(**self, timeout) } {
+            -1 => Err(-1),
+            o  => Ok(o),
+        }
     }
-    //TODO: special type as return
-    pub fn process_one(&self, timeout: i32) -> i32 {
-        unsafe { zbar_process_one(**self, timeout) }
+
+    // Tested
+    pub fn process_one(&self, timeout: i32) -> ZBarSimpleResult<Option<SymbolSet>> {
+        match unsafe { zbar_process_one(**self, timeout) } {
+            -1 => Err(-1),
+            0  => Ok(None),
+            o  => Ok(self.get_results())
+        }
     }
+
+    // Tested
     pub fn process_image(&mut self, image: &mut ZBarImage) -> ZBarSimpleResult<SymbolSet> {
-        let result = unsafe { zbar_process_image(**self, **image) };
-        match result >= 0 {
-            true  => Ok(image.symbols().unwrap()), // symbols can be unwrapped because image is surely scanned
-            false => Err(result),
+        match unsafe { zbar_process_image(**self, **image) } {
+            -1 => Err(-1),
+            o  => Ok(image.symbols().unwrap()), // symbols can be unwrapped because image is surely scanned
         }
     }
 }
@@ -180,6 +178,46 @@ impl<'a> Deref for Processor<'a> {
 }
 impl<'a> Drop for Processor<'a> {
     fn drop(&mut self) { unsafe { zbar_processor_destroy(**self) } }
+}
+
+#[cfg(feature = "zbar_fork")]
+mod zbar_fork {
+    use super::*;
+
+    impl<'a> Processor<'a> {
+        pub fn set_control(&mut self, control_name: impl AsRef<str>, value: i32) -> ZBarSimpleResult<()> {
+            //TODO
+            unimplemented!("TBD")
+//        let result = unsafe {
+//            zbar_processor_set_control(
+//                **self,
+//                OsString::from(control_name.as_ref()).to_str().unwrap().as_ptr() as *const i8,
+//                value
+//            )
+//        };
+//        println!("{}", result);
+//        match result == 0 {
+//            true  => Ok(()),
+//            false => Err(result),
+//        }
+        }
+        pub fn get_control(&self, control_name: impl AsRef<str>) -> ZBarResult<i32> {
+            //TODO
+            unimplemented!("TBD")
+//        let mut value = 0;
+//        let result = unsafe {
+//            zbar_processor_get_control(
+//                **self,
+//                control_name.as_ref().as_ptr() as *const i8,
+//                &mut value as *mut i32
+//            )
+//        };
+//        match result == 0 {
+//            true  => Ok(value),
+//            false => Err(result.into()),
+//        }
+        }
+    }
 }
 
 pub struct ProcessorBuilder {
@@ -279,7 +317,7 @@ mod test {
 
     #[test]
     #[cfg(feature = "from_image")]
-    fn test_scan_image() {
+    fn test_process_image() {
         let mut image = ZBarImage::from_path("test/qr_hello-world.png").unwrap();
 
         let mut processor = Processor::builder()

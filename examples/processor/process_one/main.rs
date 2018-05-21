@@ -10,8 +10,12 @@ pub fn main() {
         //enable code128 decoding
         .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 1)
         .with_config(ZBarSymbolType::ZBAR_EAN13, ZBarConfig::ZBAR_CFG_ENABLE, 1)
+        .with_size(Some((700, 700)))
         .build()
         .unwrap();
+
+    let r = processor.request_iomode(0).unwrap();
+//    println!("{}", r);
 
     // initialize video (system dependent!)
     processor.init("/dev/video0", true).unwrap();
@@ -19,10 +23,11 @@ pub fn main() {
     // show video
     processor.set_visible(true).unwrap();
 
-    // wait forever (-1) until symbol is decoded
-    processor.process_one(-1);
-
-    // retrieve decoded results
-    let symbols = processor.get_results().unwrap();
-    println!("{}", symbols.first_symbol().unwrap().data());
+    match processor.process_one(5000) {
+        Ok(result) => match result {
+            Some(symbols) => println!("{}", symbols.first_symbol().unwrap().data()),
+            None          => println!("timeout expired"),
+        }
+        Err(e)     => println!("error while processing: {}", e),
+    }
 }
