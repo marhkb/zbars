@@ -88,8 +88,9 @@ impl<'a> ZBarImage<'a> {
     /// let data = vec![1];
     /// let image = ZBarImage::from_borrowed(1, 1, Format::from_label("Y8"), &data).unwrap();
     /// ```
-    pub fn from_borrowed(width: u32, height: u32, format: Format, data: &'a impl AsRef<[u8]>)
-        -> ZBarImageResult<'a>
+    pub fn from_borrowed(
+        width: u32, height: u32, format: Format, data: &'a (impl ?Sized + AsRef<[u8]>)
+    ) -> ZBarImageResult<'a>
     {
         Self::new(width, height, format, Cow::Borrowed(data.as_ref()))
     }
