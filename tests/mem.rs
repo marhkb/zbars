@@ -57,8 +57,9 @@ mod test_mem {
         assert_mem(mem_before, N);
     }
 
+
     fn loop_decode() -> SymbolSet {
-        let mut image = ZBarImage::from_path("test/qr_hello-world.png").unwrap();
+        let mut image = ZBarImage::from_path("test/greetings.png").unwrap();
         let mut scanner = ImageScanner::builder()
             .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
             .build()
