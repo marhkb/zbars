@@ -131,15 +131,16 @@ pub fn parse_config(config_string: impl AsRef<str>) -> ZBarSimpleResult<(ZBarSym
 
     }
 }
+
+pub(crate) unsafe fn error_code(object: *const c_void) -> ZBarError { _zbar_get_error_code(object) }
+
 //pub fn addon_name()
 
 unsafe fn as_char_ptr(value: impl AsRef<str>) -> *const i8 {
     OsString::from(value.as_ref()).to_str().unwrap().as_ptr() as *const i8
 }
 
-unsafe fn from_cstr(ptr: *const c_char) -> &'static str {
-    CStr::from_ptr(ptr).to_str().unwrap()
-}
+unsafe fn from_cstr(ptr: *const c_char) -> &'static str { CStr::from_ptr(ptr).to_str().unwrap() }
 
 #[cfg(test)]
 mod test {
