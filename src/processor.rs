@@ -155,7 +155,7 @@ impl<'a> Processor<'a> {
         match unsafe { zbar_process_one(**self, timeout) } {
             -1 => Err(-1),
             0  => Ok(None),
-            o  => Ok(self.get_results())
+            _  => Ok(self.get_results())
         }
     }
 
@@ -163,7 +163,7 @@ impl<'a> Processor<'a> {
     pub fn process_image(&mut self, image: &mut ZBarImage) -> ZBarSimpleResult<SymbolSet> {
         match unsafe { zbar_process_image(**self, **image) } {
             -1 => Err(-1),
-            o  => Ok(image.symbols().unwrap()), // symbols can be unwrapped because image is surely scanned
+            _  => Ok(image.symbols().unwrap()), // symbols can be unwrapped because image is surely scanned
         }
     }
 }
@@ -254,16 +254,16 @@ impl ProcessorBuilder {
     pub fn build<'b>(&self) -> ZBarResult<Processor<'b>> {
         let mut processor = Processor::new(self.threaded);
         if let Some(size) = self.size {
-            processor.request_size(size.0, size.1);
+            processor.request_size(size.0, size.1)?;
         }
         if let Some(interface_version) = self.interface_version {
-            processor.request_interface(interface_version);
+            processor.request_interface(interface_version)?;
         }
         if let Some(iomode) = self.iomode {
-            processor.request_iomode(iomode);
+            processor.request_iomode(iomode)?;
         }
         if let Some(ref format) = self.format {
-            processor.force_format(format.0, format.1);
+            processor.force_format(format.0, format.1)?;
         }
         for values in &self.config {
             processor.set_config(values.0, values.1, values.2)?;

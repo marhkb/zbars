@@ -29,7 +29,7 @@ impl ImageScanner {
         match unsafe { zbar_scan_image(**self, **image) } {
             -1 => Err(-1),
             // symbols can be unwrapped because image is surely scanned
-            o  => Ok(image.symbols().unwrap()),
+            _  => Ok(image.symbols().unwrap()),
         }
     }
 }
