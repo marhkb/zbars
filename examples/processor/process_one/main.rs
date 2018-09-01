@@ -3,7 +3,7 @@ extern crate zbars;
 use zbars::prelude::*;
 
 pub fn main() {
-    let mut processor = Processor::builder()
+    let processor = Processor::builder()
         .threaded(true)
         //enable qrcode decoding
         .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
@@ -14,8 +14,7 @@ pub fn main() {
         .build()
         .unwrap();
 
-    let r = processor.request_iomode(0).unwrap();
-//    println!("{}", r);
+    processor.request_iomode(0).unwrap();
 
     // initialize video (system dependent!)
     processor.init("/dev/video0", true).unwrap();

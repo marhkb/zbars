@@ -42,6 +42,11 @@ impl SymbolSet  {
     }
 
     pub fn iter(&self) -> SymbolIter { self.first_symbol().into() }
+
+    #[cfg(feature = "zbar_fork")]
+    pub fn first_symbol_unfiltered(&self) -> Option<Symbol> {
+        Symbol::from_raw(unsafe { zbar_symbol_set_first_unfiltered(**self) })
+    }
 }
 
 impl Deref for SymbolSet {
@@ -61,27 +66,6 @@ impl Drop for SymbolSet {
     fn drop(&mut self) { self.set_ref(-1) }
 }
 
-#[cfg(feature = "zbar_fork")]
-pub mod zbar_fork {
-    use super::*;
-
-    impl SymbolSet  {
-        pub fn first_symbol_unfiltered(&self) -> Option<Symbol> {
-            Symbol::from_raw(unsafe { zbar_symbol_set_first_unfiltered(**self) })
-        }
-    }
-
-    #[cfg(test)]
-    mod test {
-        use super::*;
-
-        #[test] fn test_first_symbol_unfiltered() {
-            assert_eq!(create_symbol_set().first_symbol_unfiltered().unwrap().data(), "Hello World");
-        }
-    }
-}
-
-
 pub struct SymbolIter {
     symbol: Option<Symbol>,
 }
@@ -100,37 +84,48 @@ impl Iterator for SymbolIter {
 
 #[cfg(test)]
 mod test {
+    use std::path::Path;
     use super::*;
 
-    #[test] fn test_size() { assert_eq!(create_symbol_set().size(), 2); }
-    #[test] fn test_first_symbol() {
+    #[test]
+    fn test_size() { assert_eq!(create_symbol_set().size(), 2); }
+
+    #[test]
+    fn test_first_symbol() {
         assert_eq!(create_symbol_set().first_symbol().unwrap().data(), "Hello World");
     }
-    #[test] fn test_iter() {
+
+    #[test]
+    fn test_iter() {
         let mut iter = create_symbol_set().iter();
         assert_eq!(iter.next().unwrap().data(), "Hello World");
         assert_eq!(iter.next().unwrap().data(), "Hallo Welt");
         assert!(iter.next().is_none());
     }
-}
 
-#[cfg(test)]
-fn create_symbol_set() -> SymbolSet { create_symbol_from("test/greetings.png").symbols().unwrap() }
-#[cfg(test)]
-fn create_symbol_from(path: impl AsRef<::std::path::Path>) -> prelude::ZBarImage<'static> {
-    use prelude::{
-        ZBarImage,
-        ImageScanner
-    };
+    #[test]
+    #[cfg(feature = "zbar_fork")]
+    fn test_first_symbol_unfiltered() {
+        assert_eq!(create_symbol_set().first_symbol_unfiltered().unwrap().data(), "Hello World");
+    }
 
-    let mut image = ZBarImage::from_path(&path).unwrap();
+    fn create_symbol_set() -> SymbolSet { create_symbol_from("test/greetings.png").symbols().unwrap() }
 
-    let mut scanner = ImageScanner::builder()
-        .with_cache(false)
-        .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
-        .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 1)
-        .build()
-        .unwrap();
-    scanner.scan_image(&mut image).unwrap();
-    image
+    fn create_symbol_from(path: impl AsRef<Path>) -> prelude::ZBarImage<'static> {
+        use prelude::{
+            ZBarImage,
+            ImageScanner
+        };
+
+        let mut image = ZBarImage::from_path(&path).unwrap();
+
+        let mut scanner = ImageScanner::builder()
+            .with_cache(false)
+            .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
+            .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 1)
+            .build()
+            .unwrap();
+        scanner.scan_image(&mut image).unwrap();
+        image
+    }
 }

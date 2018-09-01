@@ -11,7 +11,7 @@ pub fn main() {
     // TODO: Image must be created after Processor::init. Investigate!
 //    let mut image = ZBarImage::from_path("test/qr_hello-world.png").unwrap();
 
-    let mut processor = Processor::builder()
+    let processor = Processor::builder()
         .threaded(true)
         //enable qrcode decoding
         .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)

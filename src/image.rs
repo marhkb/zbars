@@ -306,10 +306,8 @@ pub mod zbar_fork {
 
 #[cfg(feature = "from_image")]
 pub mod from_image {
-
-    extern crate image;
-
-    use self::image::{
+    use image_crate::{
+        self,
         GenericImage,
         DynamicImage,
         ImageResult,
@@ -337,7 +335,7 @@ pub mod from_image {
         /// }
         /// ```
         pub fn from_path(path: impl AsRef<Path>) -> ImageResult<ZBarImage<'a>> {
-            image::open(&path).map(Self::from_dyn_image)
+            image_crate::open(&path).map(Self::from_dyn_image)
         }
 
         /// Creates a `ZBarImage` from a `DynamicImage`.
@@ -405,7 +403,7 @@ pub mod from_image {
                 image.dimensions().0,
                 image.dimensions().1,
                 *FORMAT,
-                image::imageops::grayscale(image).into_raw().into()
+                image_crate::imageops::grayscale(image).into_raw().into()
             ).unwrap() // Safe to unwrap here
         }
     }
@@ -413,7 +411,7 @@ pub mod from_image {
     #[cfg(test)]
     mod test {
         use super::*;
-        use self::image::ImageBuffer;
+        use image_crate::ImageBuffer;
 
         #[test]
         fn test_from_path() { assert!(ZBarImage::from_path("test/code128.gif").is_ok()); }

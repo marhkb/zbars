@@ -22,37 +22,36 @@ impl<'a> Processor<'a> {
     }
     pub fn builder() -> ProcessorBuilder { ProcessorBuilder::new() }
 
-    pub fn init(&mut self, video_device: impl AsRef<str>, enable_display: bool) -> ZBarSimpleResult<()> {
+    //Tested
+    pub fn init(&self, video_device: impl AsRef<str>, enable_display: bool) -> ZBarResult<()> {
         match unsafe { zbar_processor_init(**self, as_char_ptr(video_device), enable_display as i32) } {
             0 => Ok(()),
-            e => Err(e),
+            e => Err(ZBarErrorType::Simple(e)),
         }
     }
     //Tested
-    pub fn request_size(&mut self, width: u32, height: u32) -> ZBarSimpleResult<()> {
+    pub fn request_size(&self, width: u32, height: u32) -> ZBarResult<()> {
         match unsafe { zbar_processor_request_size(**self, width, height) } {
             0 => Ok(()),
-            e => Err(e),
+            e => Err(ZBarErrorType::Simple(e)),
         }
     }
     //Tested
-    pub fn request_interface(&mut self, version: i32) -> ZBarSimpleResult<()> {
+    pub fn request_interface(&self, version: i32) -> ZBarResult<()> {
         match unsafe { zbar_processor_request_interface(**self, version) } {
             0 => Ok(()),
-            e => Err(e),
+            e => Err(ZBarErrorType::Simple(e)),
         }
     }
     //Tested
-    pub fn request_iomode(&mut self, iomode: i32) -> ZBarSimpleResult<()> {
+    pub fn request_iomode(&self, iomode: i32) -> ZBarResult<()> {
         match unsafe { zbar_processor_request_iomode(**self, iomode) } {
             0 => Ok(()),
-            e => Err(e),
+            e => Err(ZBarErrorType::Simple(e)),
         }
     }
-    pub fn force_format(&mut self, input_format: Format, output_format: Format)
-        -> ZBarSimpleResult<()>
-    {
-        match unsafe  {
+    pub fn force_format(&self, input_format: Format, output_format: Format) -> ZBarResult<()> {
+        match unsafe {
             zbar_processor_force_format(
                 **self,
                 input_format.value().into(),
@@ -60,7 +59,7 @@ impl<'a> Processor<'a> {
             )
         } {
             0 => Ok(()),
-            e => Err(e),
+            e => Err(ZBarErrorType::Simple(e)),
         }
     }
 
@@ -117,25 +116,25 @@ impl<'a> Processor<'a> {
         }
     }
 
-    pub fn is_visible(&self) -> ZBarSimpleResult<bool> {
+    pub fn is_visible(&self) -> ZBarResult<bool> {
         match unsafe { zbar_processor_is_visible(**self) } {
             0 => Ok(false),
             1 => Ok(true),
-            e => Err(e),
+            e => Err(ZBarErrorType::Simple(e)),
         }
     }
-    pub fn set_visible(&mut self, visible: bool) -> ZBarSimpleResult<bool> {
+    pub fn set_visible(&self, visible: bool) -> ZBarResult<bool> {
         match unsafe { zbar_processor_set_visible(**self, visible as i32) } {
             0 => Ok(false),
             1 => Ok(true),
-            e => Err(e),
+            e => Err(ZBarErrorType::Simple(e)),
         }
     }
-    pub fn set_active(&mut self, active: bool) -> ZBarSimpleResult<bool> {
+    pub fn set_active(&self, active: bool) -> ZBarResult<bool> {
         match unsafe { zbar_processor_set_active(**self, active as i32) } {
             0 => Ok(false),
             1 => Ok(true),
-            e => Err(e),
+            e => Err(ZBarErrorType::Simple(e)),
         }
     }
     pub fn get_results(&self) -> Option<SymbolSet> {
@@ -143,33 +142,75 @@ impl<'a> Processor<'a> {
     }
 
     // Tested
-    pub fn user_wait(&self, timeout: i32) -> ZBarSimpleResult<i32> {
+    pub fn user_wait(&self, timeout: i32) -> ZBarResult<i32> {
         match unsafe { zbar_processor_user_wait(**self, timeout) } {
-            -1 => Err(-1),
+            -1 => Err(ZBarErrorType::Simple(-1)),
             o  => Ok(o),
         }
     }
 
     // Tested
-    pub fn process_one(&self, timeout: i32) -> ZBarSimpleResult<Option<SymbolSet>> {
+    pub fn process_one(&self, timeout: i32) -> ZBarResult<Option<SymbolSet>> {
         match unsafe { zbar_process_one(**self, timeout) } {
-            -1 => Err(-1),
+            -1 => Err(ZBarErrorType::Simple(-1)),
             0  => Ok(None),
-            o  => Ok(self.get_results())
+            _  => Ok(self.get_results())
         }
     }
 
     // Tested
-    pub fn process_image(&mut self, image: &mut ZBarImage) -> ZBarSimpleResult<SymbolSet> {
+    pub fn process_image(&self, image: &mut ZBarImage) -> ZBarResult<SymbolSet> {
         match unsafe { zbar_process_image(**self, **image) } {
-            -1 => Err(-1),
-            o  => Ok(image.symbols().unwrap()), // symbols can be unwrapped because image is surely scanned
+            -1 => Err(ZBarErrorType::Simple(-1)),
+            _  => Ok(image.symbols().unwrap()), // symbols can be unwrapped because image is surely scanned
+        }
+    }
+
+    /// Set V4L2 Controls.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use zbars::prelude::*;
+    ///
+    /// let processor = Processor::builder().build().unwrap();
+    /// processor.init("/dev/video0", false).unwrap();
+    /// processor.set_control("brightness", 75).unwrap();
+    /// processor.set_control("contrast", 50).unwrap();
+    /// ```
+    #[cfg(feature = "zbar_fork")]
+    pub fn set_control(&self, control_name: impl AsRef<str>, value: i32) -> ZBarResult<()> {
+        match unsafe { zbar_processor_set_control(**self, as_char_ptr(control_name), value) } {
+            0 => Ok(()),
+            e => Err(ZBarErrorType::Simple(e))
+        }
+    }
+
+    /// Get V4L2 Controls.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use zbars::prelude::*;
+    ///
+    /// let processor = Processor::builder().build().unwrap();
+    /// processor.init("/dev/video0", false).unwrap();
+    /// println!("brightness: {}", processor.control("brightness").unwrap());
+    /// println!("contrast: {}", processor.control("contrast").unwrap());
+    /// ```
+    #[cfg(feature = "zbar_fork")]
+    pub fn control(&self, control_name: impl AsRef<str>) -> ZBarResult<i32> {
+        let mut value = 0;
+        match unsafe {
+            zbar_processor_get_control(**self, as_char_ptr(control_name), &mut value as *mut i32)
+        } {
+            0 => Ok(value),
+            e => Err(ZBarErrorType::Simple(e))
         }
     }
 }
 
 unsafe impl<'a> Send for Processor<'a> {}
-
 unsafe impl<'a> Sync for Processor<'a> {}
 
 impl<'a> Deref for Processor<'a> {
@@ -178,46 +219,6 @@ impl<'a> Deref for Processor<'a> {
 }
 impl<'a> Drop for Processor<'a> {
     fn drop(&mut self) { unsafe { zbar_processor_destroy(**self) } }
-}
-
-#[cfg(feature = "zbar_fork")]
-mod zbar_fork {
-    use super::*;
-
-    impl<'a> Processor<'a> {
-        pub fn set_control(&mut self, control_name: impl AsRef<str>, value: i32) -> ZBarSimpleResult<()> {
-            //TODO
-            unimplemented!("TBD")
-//        let result = unsafe {
-//            zbar_processor_set_control(
-//                **self,
-//                OsString::from(control_name.as_ref()).to_str().unwrap().as_ptr() as *const i8,
-//                value
-//            )
-//        };
-//        println!("{}", result);
-//        match result == 0 {
-//            true  => Ok(()),
-//            false => Err(result),
-//        }
-        }
-        pub fn get_control(&self, control_name: impl AsRef<str>) -> ZBarResult<i32> {
-            //TODO
-            unimplemented!("TBD")
-//        let mut value = 0;
-//        let result = unsafe {
-//            zbar_processor_get_control(
-//                **self,
-//                control_name.as_ref().as_ptr() as *const i8,
-//                &mut value as *mut i32
-//            )
-//        };
-//        match result == 0 {
-//            true  => Ok(value),
-//            false => Err(result.into()),
-//        }
-        }
-    }
 }
 
 pub struct ProcessorBuilder {
@@ -251,49 +252,44 @@ impl ProcessorBuilder {
     pub fn with_config(&mut self, symbol_type: ZBarSymbolType, config: ZBarConfig, value: i32) -> &mut Self {
         self.config.push((symbol_type, config, value)); self
     }
-    pub fn build<'b>(&self) -> ZBarResult<Processor<'b>> {
+    pub fn build<'a>(&self) -> ZBarResult<Processor<'a>> {
         let mut processor = Processor::new(self.threaded);
         if let Some(size) = self.size {
-            processor.request_size(size.0, size.1);
+            processor.request_size(size.0, size.1)?;
         }
         if let Some(interface_version) = self.interface_version {
-            processor.request_interface(interface_version);
+            processor.request_interface(interface_version)?;
         }
         if let Some(iomode) = self.iomode {
-            processor.request_iomode(iomode);
+            processor.request_iomode(iomode)?;
         }
         if let Some(ref format) = self.format {
-            processor.force_format(format.0, format.1);
+            processor.force_format(format.0, format.1)?;
         }
-        for values in &self.config {
-            processor.set_config(values.0, values.1, values.2)?;
-        }
-        Ok(processor)
+        self.config
+            .iter()
+            .try_for_each(|v| processor.set_config(v.0, v.1, v.2))
+            .map(|_| processor)
     }
 }
 
-
-
 #[cfg(test)]
 mod test {
+    use std::sync::{
+        Arc,
+        Mutex,
+    };
     use super::*;
 
-
-//    #[test]
-//    fn test_set_control() {
-////        let mut processor = Processor::builder()
-////            .threaded(true)
-////            .build();
-////        processor.init("/dev/video0", true).is_err();
-////        processor.set_control("/dev/video0", 0).unwrap();
-//    }
+    lazy_static! { static ref VIDEO_LOCK: Arc<Mutex<()>> = { Arc::new(Mutex::new(())) }; }
 
     #[test]
     fn test_wrong_video_device() {
-        let mut processor = Processor::builder()
+        let processor = Processor::builder()
             .threaded(true)
             .build()
             .unwrap();
+
         assert!(processor.init("nothing", true).is_err())
     }
 
@@ -320,7 +316,7 @@ mod test {
     fn test_process_image() {
         let mut image = ZBarImage::from_path("test/qr_hello-world.png").unwrap();
 
-        let mut processor = Processor::builder()
+        let processor = Processor::builder()
             .threaded(true)
             .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
             .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 1)
@@ -334,5 +330,39 @@ mod test {
         assert_eq!(symbol.symbol_type(), ZBarSymbolType::ZBAR_QRCODE);
         assert_eq!(symbol.data(), "Hello World");
         assert_eq!(symbol.next().is_none(), true);
+    }
+
+    #[test]
+    #[cfg(feature = "zbar_fork")]
+    fn test_set_control() {
+        let processor = Processor::builder()
+            .threaded(true)
+            .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
+            .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 1)
+            .build()
+            .unwrap();
+
+        let _lock = VIDEO_LOCK.lock().unwrap();
+
+        processor.init("/dev/video0", false).unwrap();
+        assert!(processor.set_control("brightness", 100).is_ok());
+        assert!(processor.set_control("contrast", 100).is_ok());
+    }
+
+    #[test]
+    #[cfg(feature = "zbar_fork")]
+    fn test_control() {
+        let processor = Processor::builder()
+            .threaded(true)
+            .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
+            .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 1)
+            .build()
+            .unwrap();
+
+        let _lock = VIDEO_LOCK.lock().unwrap();
+
+        processor.init("/dev/video0", false).unwrap();
+        assert!(processor.control("brightness").is_ok());
+        assert!(processor.control("contrast").is_ok());
     }
 }

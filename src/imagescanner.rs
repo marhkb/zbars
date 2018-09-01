@@ -25,18 +25,16 @@ impl ImageScanner {
     pub fn results(&self) -> Option<SymbolSet> {
         SymbolSet::from_raw(unsafe { zbar_image_scanner_get_results(**self) })
     }
-    pub fn scan_image(&mut self, image: &mut ZBarImage) -> ZBarSimpleResult<SymbolSet> {
+    pub fn scan_image(&mut self, image: &mut ZBarImage) -> ZBarResult<SymbolSet> {
         match unsafe { zbar_scan_image(**self, **image) } {
-            -1 => Err(-1),
+            -1 => Err(ZBarErrorType::Simple(-1)),
             // symbols can be unwrapped because image is surely scanned
-            o  => Ok(image.symbols().unwrap()),
+            _  => Ok(image.symbols().unwrap()),
         }
     }
 }
 
 unsafe impl Send for ImageScanner {}
-
-unsafe impl Sync for ImageScanner {}
 
 impl Default for ImageScanner {
     fn default() -> Self {
@@ -71,20 +69,20 @@ impl ImageScannerBuilder {
 
     pub fn build(&self) -> ZBarResult<ImageScanner> {
         let mut scanner = ImageScanner::new();
-        scanner.enable_cache(self.cache);
-        for values in &self.config {
-            scanner.set_config(values.0, values.1, values.2)?;
-        }
-        Ok(scanner)
+
+        self.config
+            .iter()
+            .try_for_each(|v| scanner.set_config(v.0, v.1, v.2))
+            .map(|_| {
+                scanner.enable_cache(self.cache);
+                scanner
+            })
     }
 }
-
 
 #[cfg(test)]
 #[cfg(feature = "from_image")]
 mod test {
-    extern crate image;
-
     use super::*;
     use symbol::Symbol;
 

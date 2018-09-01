@@ -3,37 +3,38 @@
 #![allow(non_snake_case)]
 
 #[cfg(feature = "from_image")]
+extern crate image as image_crate;
+#[cfg(any(feature = "from_image", test))]
 #[macro_use]
 extern crate lazy_static;
 
 use std::{
     borrow::Cow,
     error::Error,
-    fmt,
     ffi::{
         CStr,
         CString,
         OsString,
     },
+    fmt,
     mem,
-    ptr,
     ops::Deref,
     os::raw::{
         c_char,
         c_void
     },
+    ptr,
 };
-
-include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
-
 pub use zbar_color_e as ZBarColor;
+pub use zbar_config_e as ZBarConfig;
+pub use zbar_error_e as ZBarError;
+#[cfg(feature = "zbar_fork")]
+pub use zbar_modifier_e as ZBarModifier;
 #[cfg(feature = "zbar_fork")]
 pub use zbar_orientation_e as ZBarOrientation;
 pub use zbar_symbol_type_e as ZBarSymbolType;
-pub use zbar_error_e as ZBarError;
-pub use zbar_config_e as ZBarConfig;
-#[cfg(feature = "zbar_fork")]
-pub use zbar_modifier_e as ZBarModifier;
+
+include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
 pub mod format;
 pub mod image;
@@ -43,39 +44,49 @@ pub mod imagescanner;
 pub mod processor;
 pub mod prelude;
 
-pub type ZBarResult<T> = ::std::result::Result<T, ZBarErrorType>;
-pub type ZBarSimpleResult<T> = ::std::result::Result<T, i32>;
+pub type ZBarResult<T> = Result<T, ZBarErrorType>;
+
+pub enum ZBarErrorType {
+    Simple(i32),
+    Complex(ZBarError)
+}
 
 
-#[derive(Debug)]
-pub struct ZBarErrorType(ZBarError);
 impl Error for ZBarErrorType {
     fn description(&self) -> &str { "ZBar Error" }
+}
+impl fmt::Debug for ZBarErrorType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "ZBar error")
+    }
 }
 impl fmt::Display for ZBarErrorType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use ZBarError::*;
 
-        match self.0 {
-            ZBAR_ERR_NOMEM       => write!(f, "out of memory"),
-            ZBAR_ERR_INTERNAL    => write!(f, "internal library error"),
-            ZBAR_ERR_UNSUPPORTED => write!(f, "unsupported request"),
-            ZBAR_ERR_INVALID     => write!(f, "invalid request"),
-            ZBAR_ERR_LOCKING     => write!(f, "system error"),
-            ZBAR_ERR_SYSTEM      => write!(f, "locking error"),
-            ZBAR_ERR_BUSY        => write!(f, "all resources busy "),
-            ZBAR_ERR_XDISPLAY    => write!(f, "X11 display error"),
-            ZBAR_ERR_XPROTO      => write!(f, "X11 protocol error"),
-            ZBAR_ERR_CLOSED      => write!(f, "output window is closed"),
-            ZBAR_ERR_WINAPI      => write!(f, "windows system error"),
-            ZBAR_ERR_NUM         => write!(f, "number of error codes"),
-            _ => panic!(),
+        match *self {
+            ZBarErrorType::Simple(e)  => write!(f, "error {}", e),
+            ZBarErrorType::Complex(e) => match e {
+                ZBAR_ERR_NOMEM => write!(f, "out of memory"),
+                ZBAR_ERR_INTERNAL => write!(f, "internal library error"),
+                ZBAR_ERR_UNSUPPORTED => write!(f, "unsupported request"),
+                ZBAR_ERR_INVALID => write!(f, "invalid request"),
+                ZBAR_ERR_LOCKING => write!(f, "system error"),
+                ZBAR_ERR_SYSTEM => write!(f, "locking error"),
+                ZBAR_ERR_BUSY => write!(f, "all resources busy "),
+                ZBAR_ERR_XDISPLAY => write!(f, "X11 display error"),
+                ZBAR_ERR_XPROTO => write!(f, "X11 protocol error"),
+                ZBAR_ERR_CLOSED => write!(f, "output window is closed"),
+                ZBAR_ERR_WINAPI => write!(f, "windows system error"),
+                ZBAR_ERR_NUM => write!(f, "number of error codes"),
+                _ => panic!(),
+            }
         }
     }
 }
 
 impl From<i32> for ZBarErrorType {
-    fn from(error: i32) -> Self { ZBarErrorType(unsafe { mem::transmute(error) } ) }
+    fn from(error: i32) -> Self { ZBarErrorType::Complex(unsafe { mem::transmute(error) } ) }
 }
 
 pub fn version() -> (u32, u32) {
@@ -113,7 +124,7 @@ pub fn orientation_name(orientation: ZBarOrientation) -> &'static str {
     unsafe { from_cstr(zbar_get_orientation_name(orientation)) }
 }
 
-pub fn parse_config(config_string: impl AsRef<str>) -> ZBarSimpleResult<(ZBarSymbolType, ZBarConfig, i32)> {
+pub fn parse_config(config_string: impl AsRef<str>) -> ZBarResult<(ZBarSymbolType, ZBarConfig, i32)> {
     unsafe {
         let mut symbol_type = ZBarSymbolType::ZBAR_NONE;
         let mut config = ZBarConfig::ZBAR_CFG_ENABLE;
@@ -126,7 +137,7 @@ pub fn parse_config(config_string: impl AsRef<str>) -> ZBarSimpleResult<(ZBarSym
             &mut value as *mut i32,
         ) {
             0 => Ok((symbol_type, config, value)),
-            e => Err(e)
+            e => Err(ZBarErrorType::Simple(e))
         }
 
     }

@@ -51,7 +51,7 @@ mod test_mem {
 
         for _ in 0..N*10 {
             let symbol = symbols.first_symbol().unwrap();
-            let xml = symbol.xml();
+            let _xml = symbol.xml();
         }
 
         assert_mem(mem_before, N);
@@ -68,7 +68,7 @@ mod test_mem {
         let mem_before = mem();
 
         for _ in 0..N / 1000 {
-            let symbols = scanner.scan_image(&mut image).unwrap();
+            let _symbols = scanner.scan_image(&mut image).unwrap();
         }
 
         assert_mem(mem_before, N);
