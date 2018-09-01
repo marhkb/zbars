@@ -264,7 +264,9 @@ mod test {
         // TODO: Better testing
         assert_eq!(create_symbol_en().modifiers(), 0);
     }
+
     #[test]
+    #[cfg(feature = "zbar_fork")]
     fn orientation() {
         assert_eq!(create_symbol_en().orientation(), ZBarOrientation::ZBAR_ORIENT_UP);
     }
