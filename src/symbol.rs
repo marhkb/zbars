@@ -17,7 +17,7 @@ impl Symbol  {
         }
     }
     /// Increases or decreases the reference count.
-    fn set_ref(&mut self, refs: i32) { unsafe { zbar_symbol_ref(**self, refs) } }
+    fn set_ref(&self, refs: i32) { unsafe { zbar_symbol_ref(**self, refs) } }
 
     pub fn symbol_type(&self) -> ZBarSymbolType {
         unsafe { mem::transmute(zbar_symbol_get_type(**self)) }
@@ -30,9 +30,9 @@ impl Symbol  {
     /// ```
     /// use zbars::prelude::*;
     ///
-    /// let mut image = Image::from_owned(1, 1, Format::from_label("Y8"), vec![1]).unwrap();
-    /// let mut scanner = ImageScanner::builder().build().unwrap();
-    /// if let Ok(symbol_set) = scanner.scan_image(&mut image) {
+    /// let image = Image::from_owned(1, 1, Format::from_label("Y8"), vec![1]).unwrap();
+    /// let scanner = ImageScanner::builder().build().unwrap();
+    /// if let Ok(symbol_set) = scanner.scan_image(&image) {
     ///     if let Some(symbol) = symbol_set.first_symbol() {
     ///         println!("{}", symbol.data());
     ///     }
@@ -102,7 +102,7 @@ impl Symbol  {
 }
 impl Clone for Symbol {
     fn clone(&self) -> Self {
-        let mut symbol = Self { symbol: self.symbol };
+        let symbol = Self { symbol: self.symbol };
         symbol.set_ref(1);
         symbol
     }
@@ -285,14 +285,14 @@ mod test {
             ImageScanner
         };
 
-        let mut image = Image::from_path(&path).unwrap();
+        let image = Image::from_path(&path).unwrap();
 
-        let mut scanner = ImageScanner::builder()
+        let scanner = ImageScanner::builder()
             .with_cache(false)
             .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
             .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 1)
             .build()
             .unwrap();
-        scanner.scan_image(&mut image).unwrap()
+        scanner.scan_image(&image).unwrap()
     }
 }

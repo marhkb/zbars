@@ -159,7 +159,7 @@ impl<'a> Processor<'a> {
     }
 
     // Tested
-    pub fn process_image(&self, image: &mut Image) -> ZBarResult<SymbolSet> {
+    pub fn process_image(&self, image: &Image) -> ZBarResult<SymbolSet> {
         match unsafe { zbar_process_image(**self, **image) } {
             -1 => Err(ZBarErrorType::Simple(-1)),
             _  => Ok(image.symbols().unwrap()), // symbols can be unwrapped because image is surely scanned
@@ -314,7 +314,7 @@ mod test {
     #[test]
     #[cfg(feature = "from_image")]
     fn test_process_image() {
-        let mut image = Image::from_path("test/qr_hello-world.png").unwrap();
+        let image = Image::from_path("test/qr_hello-world.png").unwrap();
 
         let processor = Processor::builder()
             .threaded(true)
@@ -323,7 +323,7 @@ mod test {
             .build()
             .unwrap();
 
-        processor.process_image(&mut image).unwrap();
+        processor.process_image(&image).unwrap();
 
         let symbol = image.first_symbol().unwrap();
 

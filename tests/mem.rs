@@ -40,12 +40,12 @@ mod test_mem {
 
     #[test]
     fn test_symbol_xml() {
-        let mut image = Image::from_path("test/qr_hello-world.png").unwrap();
-        let mut scanner = ImageScanner::builder()
+        let image = Image::from_path("test/qr_hello-world.png").unwrap();
+        let scanner = ImageScanner::builder()
             .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
             .build()
             .unwrap();
-        let symbols = scanner.scan_image(&mut image).unwrap();
+        let symbols = scanner.scan_image(&image).unwrap();
 
         let mem_before = mem();
 
@@ -59,8 +59,8 @@ mod test_mem {
 
 
     fn loop_decode() -> SymbolSet {
-        let mut image = Image::from_path("test/greetings.png").unwrap();
-        let mut scanner = ImageScanner::builder()
+        let image = Image::from_path("test/greetings.png").unwrap();
+        let scanner = ImageScanner::builder()
             .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
             .build()
             .unwrap();
@@ -68,12 +68,12 @@ mod test_mem {
         let mem_before = mem();
 
         for _ in 0..N / 1000 {
-            let _symbols = scanner.scan_image(&mut image).unwrap();
+            let _symbols = scanner.scan_image(&image).unwrap();
         }
 
         assert_mem(mem_before, N);
 
-        scanner.scan_image(&mut image).unwrap()
+        scanner.scan_image(&image).unwrap()
     }
 
     fn mem() -> usize { procinfo::pid::statm_self().unwrap().resident }

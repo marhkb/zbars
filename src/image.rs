@@ -44,7 +44,6 @@ impl fmt::Display for ImageError {
     }
 }
 
-
 pub struct Image<'a> {
     image: *mut zbar_image_s,
     data: Cow<'a, [u8]>,
@@ -63,7 +62,7 @@ impl<'a> Image<'a> {
                     (data.len() as u32).into(),
                     None
                 );
-                let mut image = Self { image, data, userdata: None };
+                let image = Self { image, data, userdata: None };
                 image.set_ref(1);
                 Ok(image)
             }
@@ -196,7 +195,7 @@ impl<'a> Image<'a> {
         ).unwrap() // Safe to unwrap here
     }
 
-    fn set_ref(&mut self, refs: i32) {
+    fn set_ref(&self, refs: i32) {
         unsafe { zbar_image_ref(**self, refs) }
     }
 
@@ -228,9 +227,9 @@ impl<'a> Image<'a> {
     /// ```
     /// use zbars::prelude::*;
     ///
-    /// let mut image = Image::from_owned(1, 1, Format::from_label("Y8"), vec![1]).unwrap();
+    /// let image = Image::from_owned(1, 1, Format::from_label("Y8"), vec![1]).unwrap();
     /// let mut scanner = ImageScanner::builder().build().unwrap();
-    /// match scanner.scan_image(&mut image) {
+    /// match scanner.scan_image(&image) {
     ///     Ok(_) => match image.symbols() {
     ///         Some(symbols) => match symbols.first_symbol() {
     ///             Some(symbol) => println!("{}", symbol.data()),
@@ -244,18 +243,18 @@ impl<'a> Image<'a> {
     pub fn symbols(&self) -> Option<SymbolSet> {
         SymbolSet::from_raw(unsafe { zbar_image_get_symbols(**self) })
     }
-    pub fn set_symbols(&mut self, symbols: Option<&SymbolSet>) {
+    pub fn set_symbols(&self, symbols: Option<&SymbolSet>) {
         unsafe { zbar_image_set_symbols(**self, symbols.map_or(ptr::null(), |s| **s)) }
     }
     pub fn first_symbol(&self) -> Option<Symbol> {
         Symbol::from_raw(unsafe { zbar_image_first_symbol(self.image) })
     }
-    pub fn set_sequence(&mut self, sequence_num: u32) {
+    pub fn set_sequence(&self, sequence_num: u32) {
         unsafe { zbar_image_set_sequence(**self, sequence_num) }
     }
 
     /// Just a crop with origin
-    pub fn set_size(&mut self, width: u32, height: u32) {
+    pub fn set_size(&self, width: u32, height: u32) {
         unsafe { zbar_image_set_size(**self, width, height) }
     }
 
@@ -269,8 +268,7 @@ impl<'a> Image<'a> {
     /// use zbars::prelude::*;
     ///
     /// let userdata = "Hello World".as_bytes().to_owned();
-    /// let mut image =
-    ///      Image::from_owned(1, 1, Format::from_label("Y800"), vec![0]).unwrap();
+    /// let mut image = Image::from_owned(1, 1, Format::from_label("Y800"), vec![0]).unwrap();
     /// image.set_userdata_owned(Some(userdata));
     /// assert_eq!(image.userdata().unwrap().as_ref(), "Hello World".as_bytes());
     /// ```
@@ -349,7 +347,7 @@ impl<'a> Image<'a> {
     }
 
     #[cfg(feature = "zbar_fork")]
-    pub fn set_crop(&mut self, x: u32, y: u32, width: u32, height: u32) {
+    pub fn set_crop(&self, x: u32, y: u32, width: u32, height: u32) {
         unsafe { zbar_image_set_crop(**self, x, y, width, height) }
     }
 }
@@ -380,7 +378,7 @@ mod test {
 
     #[test]
     fn test_sequence_set_and_get() {
-        let mut image = Image::new(2, 3, Format::from_label("Y800"), Cow::Owned(vec![0; 2 * 3]))
+        let image = Image::new(2, 3, Format::from_label("Y800"), Cow::Owned(vec![0; 2 * 3]))
             .unwrap();
         assert_eq!(image.sequence(), 0);
         image.set_sequence(1);
@@ -391,7 +389,7 @@ mod test {
 
     #[test]
     fn test_set_size_smaller() {
-        let mut image = Image::new(20, 30, Format::from_label("Y800"), Cow::Owned(vec![0; 20 * 30]))
+        let image = Image::new(20, 30, Format::from_label("Y800"), Cow::Owned(vec![0; 20 * 30]))
             .unwrap();
         image.set_size(10, 12);
         assert_eq!(image.width(), 10);
@@ -400,7 +398,7 @@ mod test {
 
     #[test]
     fn test_set_size_larger() {
-        let mut image = Image::new(20, 30, Format::from_label("Y800"), Cow::Owned(vec![0; 20 * 30]))
+        let image = Image::new(20, 30, Format::from_label("Y800"), Cow::Owned(vec![0; 20 * 30]))
             .unwrap();
         image.set_size(100, 120);
         assert_eq!(image.width(), 100);
@@ -436,7 +434,7 @@ mod test {
 
     #[test]
     fn test_symbols_get_and_set() {
-        let mut image = Image::new(20, 30, Format::from_label("Y800"), Cow::Owned(vec![0; 20 * 30]))
+        let image = Image::new(20, 30, Format::from_label("Y800"), Cow::Owned(vec![0; 20 * 30]))
             .unwrap();
         assert!(image.symbols().is_none());
         image.set_symbols(None);
@@ -514,7 +512,7 @@ mod test {
     #[test]
     #[cfg(feature = "zbar_fork")]
     fn test_set_crop_smaller() {
-        let mut image = Image::new(20, 30, Format::from_label("Y800"), Cow::Owned(vec![0; 20 * 30]))
+        let image = Image::new(20, 30, Format::from_label("Y800"), Cow::Owned(vec![0; 20 * 30]))
             .unwrap();
         image.set_crop(5, 5, 10, 10);
         assert_eq!(image.crop(), (5, 5, 10, 10));
@@ -523,7 +521,7 @@ mod test {
     #[test]
     #[cfg(feature = "zbar_fork")]
     fn test_set_crop_larger() {
-        let mut image = Image::new(20, 30, Format::from_label("Y800"), Cow::Owned(vec![0; 20 * 30]))
+        let image = Image::new(20, 30, Format::from_label("Y800"), Cow::Owned(vec![0; 20 * 30]))
             .unwrap();
         image.set_crop(5, 50, 100, 200);
         assert_eq!(image.crop(), (5, 30, 15, 0));

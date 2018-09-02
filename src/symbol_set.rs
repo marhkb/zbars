@@ -18,7 +18,7 @@ impl SymbolSet  {
     }
 
     /// Increases the reference count.
-    fn set_ref(&mut self, refs: i32) { unsafe { zbar_symbol_set_ref(**self, refs) } }
+    fn set_ref(&self, refs: i32) { unsafe { zbar_symbol_set_ref(**self, refs) } }
 
     pub fn size(&self) -> i32 { unsafe { zbar_symbol_set_get_size(**self) } }
     /// Returns the first `Symbol` if one is present.
@@ -28,9 +28,9 @@ impl SymbolSet  {
     /// ```
     /// use zbars::prelude::*;
     ///
-    /// let mut image = Image::from_owned(1, 1, Format::from_label("Y8"), vec![1]).unwrap();
-    /// let mut scanner = ImageScanner::builder().build().unwrap();
-    /// if let Ok(symbol_set) = scanner.scan_image(&mut image) {
+    /// let image = Image::from_owned(1, 1, Format::from_label("Y8"), vec![1]).unwrap();
+    /// let scanner = ImageScanner::builder().build().unwrap();
+    /// if let Ok(symbol_set) = scanner.scan_image(&image) {
     ///     match symbol_set.first_symbol() {
     ///         Some(symbol) => println!("{}", symbol.data()),
     ///         None         => println!("no symbols in symbol set"),
@@ -56,7 +56,7 @@ impl Deref for SymbolSet {
 
 impl Clone for SymbolSet {
     fn clone(&self) -> Self {
-        let mut symbol_set = Self { symbol_set: self.symbol_set };
+        let symbol_set = Self { symbol_set: self.symbol_set };
         symbol_set.set_ref(1);
         symbol_set
     }
@@ -109,7 +109,9 @@ mod test {
         assert_eq!(create_symbol_set().first_symbol_unfiltered().unwrap().data(), "Hello World");
     }
 
-    fn create_symbol_set() -> SymbolSet { create_symbol_from("test/greetings.png").symbols().unwrap() }
+    fn create_symbol_set() -> SymbolSet {
+        create_symbol_from("test/greetings.png").symbols().unwrap()
+    }
 
     fn create_symbol_from(path: impl AsRef<Path>) -> prelude::Image<'static> {
         use prelude::{
@@ -117,15 +119,15 @@ mod test {
             ImageScanner
         };
 
-        let mut image = Image::from_path(&path).unwrap();
+        let image = Image::from_path(&path).unwrap();
 
-        let mut scanner = ImageScanner::builder()
+        let scanner = ImageScanner::builder()
             .with_cache(false)
             .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
             .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 1)
             .build()
             .unwrap();
-        scanner.scan_image(&mut image).unwrap();
+        scanner.scan_image(&image).unwrap();
         image
     }
 }
