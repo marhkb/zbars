@@ -13,7 +13,7 @@ mod test_mem {
     fn test_mem_image_from_buf() {
         let mem_before = mem();
         for _ in 0..N {
-            ZBarImage::from_owned(
+            Image::from_owned(
                 500, 500, Format::from_label("Y800"), vec![0; 500 * 500]
             ).unwrap();
         }
@@ -26,7 +26,7 @@ mod test_mem {
         for _ in 0..N {
             let buf = vec![0; 500 * 500];
             let buf_slice = buf.as_slice();
-            ZBarImage::from_borrowed(
+            Image::from_borrowed(
                 500, 500, Format::from_label("Y800"), &buf_slice
             ).unwrap();
         }
@@ -40,7 +40,7 @@ mod test_mem {
 
     #[test]
     fn test_symbol_xml() {
-        let mut image = ZBarImage::from_path("test/qr_hello-world.png").unwrap();
+        let mut image = Image::from_path("test/qr_hello-world.png").unwrap();
         let mut scanner = ImageScanner::builder()
             .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
             .build()
@@ -59,7 +59,7 @@ mod test_mem {
 
 
     fn loop_decode() -> SymbolSet {
-        let mut image = ZBarImage::from_path("test/greetings.png").unwrap();
+        let mut image = Image::from_path("test/greetings.png").unwrap();
         let mut scanner = ImageScanner::builder()
             .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
             .build()

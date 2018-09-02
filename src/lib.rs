@@ -39,8 +39,8 @@ include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 pub mod format;
 pub mod image;
 pub mod symbol;
-pub mod symbolset;
-pub mod imagescanner;
+pub mod symbol_set;
+pub mod image_scanner;
 pub mod processor;
 pub mod prelude;
 
@@ -50,10 +50,8 @@ pub enum ZBarErrorType {
     Simple(i32),
     Complex(ZBarError)
 }
-
-
 impl Error for ZBarErrorType {
-    fn description(&self) -> &str { "ZBar Error" }
+    fn description(&self) -> &str { "ZBar error" }
 }
 impl fmt::Debug for ZBarErrorType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -65,7 +63,7 @@ impl fmt::Display for ZBarErrorType {
         use ZBarError::*;
 
         match *self {
-            ZBarErrorType::Simple(e)  => write!(f, "error {}", e),
+            ZBarErrorType::Simple(e)  => write!(f, "ZBar simple error {}", e),
             ZBarErrorType::Complex(e) => match e {
                 ZBAR_ERR_NOMEM => write!(f, "out of memory"),
                 ZBAR_ERR_INTERNAL => write!(f, "internal library error"),

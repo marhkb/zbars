@@ -24,7 +24,7 @@ pub fn main() {
     processor.init("/dev/video0", true).unwrap();
 
     // TODO: Image must be created after Processor::init. Investigate!
-    let mut image = ZBarImage::from_path("test/qr_hello-world.png").unwrap();
+    let mut image = Image::from_path("test/qr_hello-world.png").unwrap();
 
     // set processor visible in order display the image to process
     processor.set_visible(true).unwrap();

@@ -28,7 +28,7 @@ impl SymbolSet  {
     /// ```
     /// use zbars::prelude::*;
     ///
-    /// let mut image = ZBarImage::from_owned(1, 1, Format::from_label("Y8"), vec![1]).unwrap();
+    /// let mut image = Image::from_owned(1, 1, Format::from_label("Y8"), vec![1]).unwrap();
     /// let mut scanner = ImageScanner::builder().build().unwrap();
     /// if let Ok(symbol_set) = scanner.scan_image(&mut image) {
     ///     match symbol_set.first_symbol() {
@@ -111,13 +111,13 @@ mod test {
 
     fn create_symbol_set() -> SymbolSet { create_symbol_from("test/greetings.png").symbols().unwrap() }
 
-    fn create_symbol_from(path: impl AsRef<Path>) -> prelude::ZBarImage<'static> {
+    fn create_symbol_from(path: impl AsRef<Path>) -> prelude::Image<'static> {
         use prelude::{
-            ZBarImage,
+            Image,
             ImageScanner
         };
 
-        let mut image = ZBarImage::from_path(&path).unwrap();
+        let mut image = Image::from_path(&path).unwrap();
 
         let mut scanner = ImageScanner::builder()
             .with_cache(false)

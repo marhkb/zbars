@@ -2,9 +2,9 @@ pub use {
     ZBarSymbolType,
     ZBarConfig,
     format::Format,
-    image::ZBarImage,
-    symbolset::SymbolSet,
+    image::Image,
+    symbol_set::SymbolSet,
     symbol::Symbol,
-    imagescanner::ImageScanner,
+    image_scanner::ImageScanner,
     processor::Processor,
 };

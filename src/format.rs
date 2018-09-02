@@ -1,4 +1,5 @@
 use super::*;
+use std::str::from_utf8;
 
 /// A FOURCC code (https://www.fourcc.org/fourcc.php)
 ///
@@ -84,8 +85,7 @@ impl Deref for Format {
 }
 impl ToString for Format {
     fn to_string(&self) -> String {
-        std::str::from_utf8(&unsafe { mem::transmute::<_, [u8; 4]>(*self) })
-            .unwrap().trim().to_owned()
+        from_utf8(&unsafe { mem::transmute::<_, [u8; 4]>(*self) }).unwrap().trim().to_owned()
     }
 }
 

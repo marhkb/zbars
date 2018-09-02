@@ -1,7 +1,7 @@
 use {
     format::Format,
-    image::ZBarImage,
-    symbolset::SymbolSet,
+    image::Image,
+    symbol_set::SymbolSet,
 };
 use super::*;
 
@@ -159,7 +159,7 @@ impl<'a> Processor<'a> {
     }
 
     // Tested
-    pub fn process_image(&self, image: &mut ZBarImage) -> ZBarResult<SymbolSet> {
+    pub fn process_image(&self, image: &mut Image) -> ZBarResult<SymbolSet> {
         match unsafe { zbar_process_image(**self, **image) } {
             -1 => Err(ZBarErrorType::Simple(-1)),
             _  => Ok(image.symbols().unwrap()), // symbols can be unwrapped because image is surely scanned
@@ -314,7 +314,7 @@ mod test {
     #[test]
     #[cfg(feature = "from_image")]
     fn test_process_image() {
-        let mut image = ZBarImage::from_path("test/qr_hello-world.png").unwrap();
+        let mut image = Image::from_path("test/qr_hello-world.png").unwrap();
 
         let processor = Processor::builder()
             .threaded(true)

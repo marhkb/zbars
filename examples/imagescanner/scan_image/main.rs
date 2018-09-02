@@ -3,7 +3,7 @@ extern crate zbars;
 use zbars::prelude::*;
 
 pub fn main() {
-    let mut image = ZBarImage::from_path("test/qr_hello-world.png")
+    let mut image = Image::from_path("test/qr_hello-world.png")
         .expect("unable to create image");
 
     let mut scanner = ImageScanner::builder()

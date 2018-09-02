@@ -1,5 +1,5 @@
 use super::*;
-use symbolset::*;
+use symbol_set::*;
 
 pub struct Symbol   {
     symbol: *const zbar_symbol_s,
@@ -30,7 +30,7 @@ impl Symbol  {
     /// ```
     /// use zbars::prelude::*;
     ///
-    /// let mut image = ZBarImage::from_owned(1, 1, Format::from_label("Y8"), vec![1]).unwrap();
+    /// let mut image = Image::from_owned(1, 1, Format::from_label("Y8"), vec![1]).unwrap();
     /// let mut scanner = ImageScanner::builder().build().unwrap();
     /// if let Ok(symbol_set) = scanner.scan_image(&mut image) {
     ///     if let Some(symbol) = symbol_set.first_symbol() {
@@ -281,11 +281,11 @@ mod test {
 
     fn create_symbol_set_from(path: impl AsRef<Path>) -> SymbolSet{
         use prelude::{
-            ZBarImage,
+            Image,
             ImageScanner
         };
 
-        let mut image = ZBarImage::from_path(&path).unwrap();
+        let mut image = Image::from_path(&path).unwrap();
 
         let mut scanner = ImageScanner::builder()
             .with_cache(false)
