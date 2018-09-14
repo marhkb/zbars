@@ -19,13 +19,13 @@ impl ImageScanner {
     pub fn enable_cache(&self, enable: bool) {
         unsafe { zbar_image_scanner_enable_cache(**self, enable as i32); }
     }
-    pub fn recycle_image(&self, image: &Image) {
+    pub fn recycle_image<T>(&self, image: &Image<T>) where T: AsRef<[u8]> + Clone {
         unsafe { zbar_image_scanner_recycle_image(**self, **image) }
     }
     pub fn results(&self) -> Option<SymbolSet> {
         SymbolSet::from_raw(unsafe { zbar_image_scanner_get_results(**self) })
     }
-    pub fn scan_image(&self, image: &Image) -> ZBarResult<SymbolSet> {
+    pub fn scan_image<T>(&self, image: &Image<T>) -> ZBarResult<SymbolSet> where T: AsRef<[u8]> + Clone {
         match unsafe { zbar_scan_image(**self, **image) } {
             -1 => Err(ZBarErrorType::Simple(-1)),
             // symbols can be unwrapped because image is surely scanned

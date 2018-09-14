@@ -159,7 +159,7 @@ impl<'a> Processor<'a> {
     }
 
     // Tested
-    pub fn process_image(&self, image: &Image) -> ZBarResult<SymbolSet> {
+    pub fn process_image<T>(&self, image: &Image<T>) -> ZBarResult<SymbolSet> where T: AsRef<[u8]> + Clone {
         match unsafe { zbar_process_image(**self, **image) } {
             -1 => Err(ZBarErrorType::Simple(-1)),
             _  => Ok(image.symbols().unwrap()), // symbols can be unwrapped because image is surely scanned

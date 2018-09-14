@@ -113,7 +113,7 @@ mod test {
         create_symbol_from("test/greetings.png").symbols().unwrap()
     }
 
-    fn create_symbol_from(path: impl AsRef<Path>) -> prelude::Image<'static> {
+    fn create_symbol_from(path: impl AsRef<Path>) -> prelude::Image<'static, Vec<u8>> {
         use prelude::{
             Image,
             ImageScanner
