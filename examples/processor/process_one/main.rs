@@ -3,7 +3,7 @@ extern crate zbars;
 use zbars::prelude::*;
 
 pub fn main() {
-    let processor = Processor::builder()
+    let processor = ZBarProcessor::builder()
         .threaded(true)
         //enable qrcode decoding
         .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)

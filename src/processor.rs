@@ -1,59 +1,62 @@
 use {
+    as_char_ptr,
+    ffi,
     format::Format,
-    image::Image,
-    symbol_set::SymbolSet,
+    image::ZBarImage,
+    symbol_set::ZBarSymbolSet,
+    ZBarConfig,
+    ZBarErrorType,
+    ZBarResult,
+    ZBarSymbolType,
 };
-use super::*;
 
-pub struct Processor<'a> {
-    processor: *mut zbar_processor_s,
-    userdata: Option<Cow<'a, [u8]>>,
+pub struct ZBarProcessor {
+    pub(crate) processor: *mut ffi::zbar_processor_s,
 }
-impl<'a> Processor<'a> {
+impl ZBarProcessor {
     pub fn new(threaded: bool) -> Self {
-        let mut processor = Processor {
-            processor: unsafe { zbar_processor_create(threaded as i32) },
-            userdata: None,
+        let mut processor = ZBarProcessor {
+            processor: unsafe { ffi::zbar_processor_create(threaded as i32) }
         };
         processor.set_config(ZBarSymbolType::ZBAR_NONE, ZBarConfig::ZBAR_CFG_ENABLE, 0)
             // save to unwrap here
             .unwrap();
         processor
     }
-    pub fn builder() -> ProcessorBuilder { ProcessorBuilder::new() }
+    pub fn builder() -> ZBarProcessorBuilder { ZBarProcessorBuilder::new() }
 
     //Tested
     pub fn init(&self, video_device: impl AsRef<str>, enable_display: bool) -> ZBarResult<()> {
-        match unsafe { zbar_processor_init(**self, as_char_ptr(video_device), enable_display as i32) } {
+        match unsafe { ffi::zbar_processor_init(self.processor, as_char_ptr(video_device), enable_display as i32) } {
             0 => Ok(()),
             e => Err(ZBarErrorType::Simple(e)),
         }
     }
     //Tested
     pub fn request_size(&self, width: u32, height: u32) -> ZBarResult<()> {
-        match unsafe { zbar_processor_request_size(**self, width, height) } {
+        match unsafe { ffi::zbar_processor_request_size(self.processor, width, height) } {
             0 => Ok(()),
             e => Err(ZBarErrorType::Simple(e)),
         }
     }
     //Tested
     pub fn request_interface(&self, version: i32) -> ZBarResult<()> {
-        match unsafe { zbar_processor_request_interface(**self, version) } {
+        match unsafe { ffi::zbar_processor_request_interface(self.processor, version) } {
             0 => Ok(()),
             e => Err(ZBarErrorType::Simple(e)),
         }
     }
     //Tested
     pub fn request_iomode(&self, iomode: i32) -> ZBarResult<()> {
-        match unsafe { zbar_processor_request_iomode(**self, iomode) } {
+        match unsafe { ffi::zbar_processor_request_iomode(self.processor, iomode) } {
             0 => Ok(()),
             e => Err(ZBarErrorType::Simple(e)),
         }
     }
     pub fn force_format(&self, input_format: Format, output_format: Format) -> ZBarResult<()> {
         match unsafe {
-            zbar_processor_force_format(
-                **self,
+            ffi::zbar_processor_force_format(
+                self.processor,
                 input_format.value().into(),
                 output_format.value().into()
             )
@@ -63,95 +66,49 @@ impl<'a> Processor<'a> {
         }
     }
 
-    /// Sets borrowed user data for `Processor`.
-    ///
-    /// User data can be shared across different `Processors`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use zbars::prelude::*;
-    ///
-    /// let userdata = "Hello World".as_bytes();
-    /// let mut processor1 = Processor::builder().build().unwrap();
-    /// let mut processor2 = Processor::builder().build().unwrap();
-    /// processor1.set_userdata_borrowed(Some(&userdata));
-    /// processor2.set_userdata_borrowed(Some(&userdata));
-    /// assert_eq!(processor1.userdata().unwrap(), processor1.userdata().unwrap());
-    /// ```
-    pub fn set_userdata(&mut self, userdata: Option<Cow<'a, [u8]>>) {
-        unsafe {
-            zbar_processor_set_userdata(
-                **self,
-                userdata.as_ref().map_or(ptr::null(), |s| s.as_ptr()) as *mut u8 as *mut c_void)
-        }
-        self.userdata = userdata;
-    }
-    pub fn set_userdata_owned(&mut self, userdata: Option<Vec<u8>>) {
-        self.set_userdata(userdata.map(Cow::Owned))
-    }
-    pub fn set_userdata_borrowed(&mut self, userdata: Option<&'a (impl AsRef<[u8]> + Clone)>) {
-        self.set_userdata(userdata.map(AsRef::as_ref).map(Cow::Borrowed))
-    }
-
-    /// Returns assigned user data of `Processor`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use zbars::prelude::*;
-    ///
-    /// let userdata = "Hello World".as_bytes();
-    /// let mut processor1 = Processor::builder().build().unwrap();
-    /// let mut processor2 = Processor::builder().build().unwrap();
-    /// processor1.set_userdata_borrowed(Some(&userdata));
-    /// processor2.set_userdata_owned(Some("Hello World".as_bytes().to_owned()));
-    /// assert_eq!(processor1.userdata().unwrap(), processor1.userdata().unwrap());
-    /// ```
-    pub fn userdata(&self) -> Option<&Cow<'a, [u8]>> { self.userdata.as_ref() }
     pub fn set_config(&mut self, symbol_type: ZBarSymbolType, config: ZBarConfig, value: i32) -> ZBarResult<()> {
-        match unsafe { zbar_processor_set_config(**self, symbol_type, config, value) }  {
+        match unsafe { ffi::zbar_processor_set_config(self.processor, symbol_type, config, value) }  {
             0 => Ok(()),
             e => Err(e.into())
         }
     }
 
     pub fn is_visible(&self) -> ZBarResult<bool> {
-        match unsafe { zbar_processor_is_visible(**self) } {
+        match unsafe { ffi::zbar_processor_is_visible(self.processor) } {
             0 => Ok(false),
             1 => Ok(true),
             e => Err(ZBarErrorType::Simple(e)),
         }
     }
     pub fn set_visible(&self, visible: bool) -> ZBarResult<bool> {
-        match unsafe { zbar_processor_set_visible(**self, visible as i32) } {
+        match unsafe { ffi::zbar_processor_set_visible(self.processor, visible as i32) } {
             0 => Ok(false),
             1 => Ok(true),
             e => Err(ZBarErrorType::Simple(e)),
         }
     }
     pub fn set_active(&self, active: bool) -> ZBarResult<bool> {
-        match unsafe { zbar_processor_set_active(**self, active as i32) } {
+        match unsafe { ffi::zbar_processor_set_active(self.processor, active as i32) } {
             0 => Ok(false),
             1 => Ok(true),
             e => Err(ZBarErrorType::Simple(e)),
         }
     }
-    pub fn get_results(&self) -> Option<SymbolSet> {
-        SymbolSet::from_raw(unsafe { zbar_processor_get_results(**self) })
+    pub fn get_results(&self) -> Option<ZBarSymbolSet> {
+        ZBarSymbolSet::from_raw(unsafe { ffi::zbar_processor_get_results(self.processor) })
     }
 
     // Tested
     pub fn user_wait(&self, timeout: i32) -> ZBarResult<i32> {
-        match unsafe { zbar_processor_user_wait(**self, timeout) } {
+        match unsafe { ffi::zbar_processor_user_wait(self.processor, timeout) } {
             -1 => Err(ZBarErrorType::Simple(-1)),
             o  => Ok(o),
         }
     }
 
     // Tested
-    pub fn process_one(&self, timeout: i32) -> ZBarResult<Option<SymbolSet>> {
-        match unsafe { zbar_process_one(**self, timeout) } {
+    pub fn process_one(&self, timeout: i32) -> ZBarResult<Option<ZBarSymbolSet>> {
+        match unsafe { ffi::zbar_process_one(self.processor, timeout) } {
             -1 => Err(ZBarErrorType::Simple(-1)),
             0  => Ok(None),
             _  => Ok(self.get_results())
@@ -159,13 +116,15 @@ impl<'a> Processor<'a> {
     }
 
     // Tested
-    pub fn process_image<T>(&self, image: &Image<T>) -> ZBarResult<SymbolSet> where T: AsRef<[u8]> + Clone {
-        match unsafe { zbar_process_image(**self, **image) } {
+    pub fn process_image<T>(&self, image: &ZBarImage<T>) -> ZBarResult<ZBarSymbolSet> {
+        match unsafe { ffi::zbar_process_image(self.processor, image.image) } {
             -1 => Err(ZBarErrorType::Simple(-1)),
             _  => Ok(image.symbols().unwrap()), // symbols can be unwrapped because image is surely scanned
         }
     }
-
+}
+#[cfg(feature = "zbar_fork")]
+impl ZBarProcessor {
     /// Set V4L2 Controls.
     ///
     /// # Examples
@@ -173,14 +132,13 @@ impl<'a> Processor<'a> {
     /// ```no_run
     /// use zbars::prelude::*;
     ///
-    /// let processor = Processor::builder().build().unwrap();
+    /// let processor = ZBarProcessor::builder().build().unwrap();
     /// processor.init("/dev/video0", false).unwrap();
     /// processor.set_control("brightness", 75).unwrap();
     /// processor.set_control("contrast", 50).unwrap();
     /// ```
-    #[cfg(feature = "zbar_fork")]
     pub fn set_control(&self, control_name: impl AsRef<str>, value: i32) -> ZBarResult<()> {
-        match unsafe { zbar_processor_set_control(**self, as_char_ptr(control_name), value) } {
+        match unsafe { ffi::zbar_processor_set_control(self.processor, as_char_ptr(control_name), value) } {
             0 => Ok(()),
             e => Err(ZBarErrorType::Simple(e))
         }
@@ -193,35 +151,31 @@ impl<'a> Processor<'a> {
     /// ```no_run
     /// use zbars::prelude::*;
     ///
-    /// let processor = Processor::builder().build().unwrap();
+    /// let processor = ZBarProcessor::builder().build().unwrap();
     /// processor.init("/dev/video0", false).unwrap();
     /// println!("brightness: {}", processor.control("brightness").unwrap());
     /// println!("contrast: {}", processor.control("contrast").unwrap());
     /// ```
-    #[cfg(feature = "zbar_fork")]
     pub fn control(&self, control_name: impl AsRef<str>) -> ZBarResult<i32> {
         let mut value = 0;
         match unsafe {
-            zbar_processor_get_control(**self, as_char_ptr(control_name), &mut value as *mut i32)
+            ffi::zbar_processor_get_control(self.processor, as_char_ptr(control_name), &mut value as *mut i32)
         } {
             0 => Ok(value),
             e => Err(ZBarErrorType::Simple(e))
         }
     }
+
+}
+unsafe impl Send for ZBarProcessor {}
+unsafe impl Sync for ZBarProcessor {}
+
+impl Drop for ZBarProcessor {
+    fn drop(&mut self) { unsafe { ffi::zbar_processor_destroy(self.processor) } }
 }
 
-unsafe impl<'a> Send for Processor<'a> {}
-unsafe impl<'a> Sync for Processor<'a> {}
-
-impl<'a> Deref for Processor<'a> {
-    type Target = *mut zbar_processor_s;
-    fn deref(&self) -> &Self::Target { &self.processor }
-}
-impl<'a> Drop for Processor<'a> {
-    fn drop(&mut self) { unsafe { zbar_processor_destroy(**self) } }
-}
-
-pub struct ProcessorBuilder {
+#[derive(Default)]
+pub struct ZBarProcessorBuilder {
     threaded: bool,
     size: Option<(u32, u32)>,
     interface_version: Option<i32>,
@@ -229,7 +183,7 @@ pub struct ProcessorBuilder {
     format: Option<(Format, Format)>,
     config: Vec<(ZBarSymbolType, ZBarConfig, i32)>,
 }
-impl ProcessorBuilder {
+impl ZBarProcessorBuilder {
     pub fn new() -> Self {
         Self {
             threaded: false,
@@ -252,8 +206,8 @@ impl ProcessorBuilder {
     pub fn with_config(&mut self, symbol_type: ZBarSymbolType, config: ZBarConfig, value: i32) -> &mut Self {
         self.config.push((symbol_type, config, value)); self
     }
-    pub fn build<'a>(&self) -> ZBarResult<Processor<'a>> {
-        let mut processor = Processor::new(self.threaded);
+    pub fn build(&self) -> ZBarResult<ZBarProcessor> {
+        let mut processor = ZBarProcessor::new(self.threaded);
         if let Some(size) = self.size {
             processor.request_size(size.0, size.1)?;
         }
@@ -285,7 +239,7 @@ mod test {
 
     #[test]
     fn test_wrong_video_device() {
-        let processor = Processor::builder()
+        let processor = ZBarProcessor::builder()
             .threaded(true)
             .build()
             .unwrap();
@@ -294,29 +248,11 @@ mod test {
     }
 
     #[test]
-    fn test_userdata_set_and_get() {
-        let userdata = "Hello World".as_bytes().to_owned();
-
-        let mut processor1 = Processor::builder().build().unwrap();
-        let mut processor2 = Processor::builder().build().unwrap();
-        let mut processor3 = Processor::builder().build().unwrap();
-
-        assert!(processor1.userdata().is_none());
-
-        processor1.set_userdata_borrowed(Some(&userdata));
-        processor2.set_userdata_owned(Some(userdata.clone()));
-        processor3.set_userdata_borrowed(Some(&userdata));
-
-        assert_eq!(processor1.userdata().unwrap(), processor2.userdata().unwrap());
-        assert_eq!(processor1.userdata().unwrap(), processor3.userdata().unwrap());
-    }
-
-    #[test]
     #[cfg(feature = "from_image")]
     fn test_process_image() {
-        let image = Image::from_path("test/qr_hello-world.png").unwrap();
+        let image = ZBarImage::from_path("test/qr_hello-world.png").unwrap();
 
-        let processor = Processor::builder()
+        let processor = ZBarProcessor::builder()
             .threaded(true)
             .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
             .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 1)
@@ -335,7 +271,7 @@ mod test {
     #[test]
     #[cfg(feature = "zbar_fork")]
     fn test_set_control() {
-        let processor = Processor::builder()
+        let processor = ZBarProcessor::builder()
             .threaded(true)
             .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
             .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 1)
@@ -352,7 +288,7 @@ mod test {
     #[test]
     #[cfg(feature = "zbar_fork")]
     fn test_control() {
-        let processor = Processor::builder()
+        let processor = ZBarProcessor::builder()
             .threaded(true)
             .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
             .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 1)

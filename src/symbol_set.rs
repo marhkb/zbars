@@ -1,26 +1,28 @@
-use super::*;
-use symbol::*;
+use {
+    ffi,
+    symbol::ZBarSymbol
+};
+use std::mem;
 
-pub struct SymbolSet {
-    symbol_set: *const zbar_symbol_set_s,
+pub struct ZBarSymbolSet {
+    pub(crate) symbol_set: *const ffi::zbar_symbol_set_s,
 }
-impl SymbolSet  {
+impl ZBarSymbolSet {
     /// Creates a new `SymbolSet` from raw data.
-    pub(crate) fn from_raw(symbol_set: *const zbar_symbol_set_s) -> Option<Self> {
-        match !symbol_set.is_null() {
-            true  => {
-                let mut symbol_set = Self { symbol_set };
-                symbol_set.set_ref(1);
-                Some(symbol_set)
-            },
-            false => None,
+    pub(crate) fn from_raw(symbol_set: *const ffi::zbar_symbol_set_s) -> Option<Self> {
+        if !symbol_set.is_null() {
+            let symbol_set = Self { symbol_set };
+            symbol_set.set_ref(1);
+            Some(symbol_set)
+        } else {
+            None
         }
     }
 
     /// Increases the reference count.
-    fn set_ref(&self, refs: i32) { unsafe { zbar_symbol_set_ref(**self, refs) } }
+    fn set_ref(&self, refs: i32) { unsafe { ffi::zbar_symbol_set_ref(self.symbol_set, refs) } }
 
-    pub fn size(&self) -> i32 { unsafe { zbar_symbol_set_get_size(**self) } }
+    pub fn size(&self) -> i32 { unsafe { ffi::zbar_symbol_set_get_size(self.symbol_set) } }
     /// Returns the first `Symbol` if one is present.
     ///
     /// # Examples
@@ -28,8 +30,8 @@ impl SymbolSet  {
     /// ```
     /// use zbars::prelude::*;
     ///
-    /// let image = Image::from_owned(1, 1, Format::from_label("Y8"), vec![1]).unwrap();
-    /// let scanner = ImageScanner::builder().build().unwrap();
+    /// let image = ZBarImage::new(1, 1, Format::from_label("Y8"), vec![1]).unwrap();
+    /// let scanner = ZBarImageScanner::builder().build().unwrap();
     /// if let Ok(symbol_set) = scanner.scan_image(&image) {
     ///     match symbol_set.first_symbol() {
     ///         Some(symbol) => println!("{}", symbol.data()),
@@ -37,24 +39,19 @@ impl SymbolSet  {
     ///     }
     /// };
     /// ```
-    pub fn first_symbol(&self) -> Option<Symbol> {
-        Symbol::from_raw(unsafe { zbar_symbol_set_first_symbol(**self) })
+    pub fn first_symbol(&self) -> Option<ZBarSymbol> {
+        ZBarSymbol::from_raw(unsafe { ffi::zbar_symbol_set_first_symbol(self.symbol_set) })
     }
 
     pub fn iter(&self) -> SymbolIter { self.first_symbol().into() }
 
     #[cfg(feature = "zbar_fork")]
-    pub fn first_symbol_unfiltered(&self) -> Option<Symbol> {
-        Symbol::from_raw(unsafe { zbar_symbol_set_first_unfiltered(**self) })
+    pub fn first_symbol_unfiltered(&self) -> Option<ZBarSymbol> {
+        ZBarSymbol::from_raw(unsafe { ffi::zbar_symbol_set_first_unfiltered(self.symbol_set) })
     }
 }
 
-impl Deref for SymbolSet {
-    type Target = *const zbar_symbol_set_s;
-    fn deref(&self) -> &Self::Target { &self.symbol_set }
-}
-
-impl Clone for SymbolSet {
+impl Clone for ZBarSymbolSet {
     fn clone(&self) -> Self {
         let symbol_set = Self { symbol_set: self.symbol_set };
         symbol_set.set_ref(1);
@@ -62,21 +59,21 @@ impl Clone for SymbolSet {
     }
 }
 
-impl Drop for SymbolSet {
+impl Drop for ZBarSymbolSet {
     fn drop(&mut self) { self.set_ref(-1) }
 }
 
 pub struct SymbolIter {
-    symbol: Option<Symbol>,
+    symbol: Option<ZBarSymbol>,
 }
-impl From<Option<Symbol>> for SymbolIter {
-    fn from(symbol: Option<Symbol>) -> Self { Self { symbol } }
+impl From<Option<ZBarSymbol>> for SymbolIter {
+    fn from(symbol: Option<ZBarSymbol>) -> Self { Self { symbol } }
 }
 impl Iterator for SymbolIter {
-    type Item = Symbol;
+    type Item = ZBarSymbol;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let mut next = self.symbol.as_ref().and_then(Symbol::next);
+        let mut next = self.symbol.as_ref().and_then(ZBarSymbol::next);
         mem::swap(&mut self.symbol, &mut next);
         next
     }
@@ -84,6 +81,7 @@ impl Iterator for SymbolIter {
 
 #[cfg(test)]
 mod test {
+    use prelude::*;
     use std::path::Path;
     use super::*;
 
@@ -109,19 +107,14 @@ mod test {
         assert_eq!(create_symbol_set().first_symbol_unfiltered().unwrap().data(), "Hello World");
     }
 
-    fn create_symbol_set() -> SymbolSet {
+    fn create_symbol_set() -> ZBarSymbolSet {
         create_symbol_from("test/greetings.png").symbols().unwrap()
     }
 
-    fn create_symbol_from(path: impl AsRef<Path>) -> prelude::Image<'static, Vec<u8>> {
-        use prelude::{
-            Image,
-            ImageScanner
-        };
+    fn create_symbol_from(path: impl AsRef<Path>) -> ZBarImage<Vec<u8>> {
+        let image = ZBarImage::from_path(&path).unwrap();
 
-        let image = Image::from_path(&path).unwrap();
-
-        let scanner = ImageScanner::builder()
+        let scanner = ZBarImageScanner::builder()
             .with_cache(false)
             .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
             .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 1)

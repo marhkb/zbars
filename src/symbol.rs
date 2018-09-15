@@ -1,26 +1,35 @@
-use super::*;
-use symbol_set::*;
+use {
+    ffi,
+    from_cstr,
+    symbol_set::ZBarSymbolSet,
+    ZBarOrientation,
+    ZBarSymbolType
+};
+use std::{
+    ffi::CString,
+    ops::Deref,
+};
 
-pub struct Symbol   {
-    symbol: *const zbar_symbol_s,
+
+pub struct ZBarSymbol {
+    pub(crate) symbol: *const ffi::zbar_symbol_s,
 }
-impl Symbol  {
+impl ZBarSymbol {
     /// Creates a new `SymbolSet` from raw data.
-    pub(crate) fn from_raw(symbol: *const zbar_symbol_s) -> Option<Self> {
-        match !symbol.is_null() {
-            true  => {
-                let mut symbol = Self { symbol };
-                symbol.set_ref(1);
-                Some(symbol)
-            },
-            false => None
+    pub(crate) fn from_raw(symbol: *const ffi::zbar_symbol_s) -> Option<Self> {
+        if !symbol.is_null() {
+            let symbol = Self { symbol };
+            symbol.set_ref(1);
+            Some(symbol)
+        } else {
+            None
         }
     }
     /// Increases or decreases the reference count.
-    fn set_ref(&self, refs: i32) { unsafe { zbar_symbol_ref(**self, refs) } }
+    fn set_ref(&self, refs: i32) { unsafe { ffi::zbar_symbol_ref(self.symbol, refs) } }
 
     pub fn symbol_type(&self) -> ZBarSymbolType {
-        unsafe { mem::transmute(zbar_symbol_get_type(**self)) }
+        unsafe { ffi::zbar_symbol_get_type(self.symbol) }
     }
 
     /// Returns the decoded data for this `Symbol`
@@ -30,16 +39,16 @@ impl Symbol  {
     /// ```
     /// use zbars::prelude::*;
     ///
-    /// let image = Image::from_owned(1, 1, Format::from_label("Y8"), vec![1]).unwrap();
-    /// let scanner = ImageScanner::builder().build().unwrap();
+    /// let image = ZBarImage::new(1, 1, Format::from_label("Y8"), vec![1]).unwrap();
+    /// let scanner = ZBarImageScanner::builder().build().unwrap();
     /// if let Ok(symbol_set) = scanner.scan_image(&image) {
     ///     if let Some(symbol) = symbol_set.first_symbol() {
     ///         println!("{}", symbol.data());
     ///     }
     /// };
     /// ```
-    pub fn data(&self) -> &str { unsafe { from_cstr(zbar_symbol_get_data(**self)) } }
-    pub fn quality(&self) -> i32 { unsafe { zbar_symbol_get_quality(**self) } }
+    pub fn data(&self) -> &str { unsafe { from_cstr(ffi::zbar_symbol_get_data(self.symbol)) } }
+    pub fn quality(&self) -> i32 { unsafe { ffi::zbar_symbol_get_quality(self.symbol) } }
     /// Retrieve the current cache count
     pub fn count(&self) -> i32 {
         //TODO: Specify what count is
@@ -48,17 +57,17 @@ impl Symbol  {
          * @returns 0 if symbol is newly verified.
          * @returns > 0 for duplicate symbols
         */
-        unsafe { zbar_symbol_get_count(**self) }
+        unsafe { ffi::zbar_symbol_get_count(self.symbol) }
     }
-    pub fn loc_size(&self) -> u32 { unsafe { zbar_symbol_get_loc_size(**self) } }
+    pub fn loc_size(&self) -> u32 { unsafe { ffi::zbar_symbol_get_loc_size(self.symbol) } }
     pub fn loc_x(&self, index: u32) -> Option<u32> {
-        match unsafe { zbar_symbol_get_loc_x(**self, index) } {
+        match unsafe { ffi::zbar_symbol_get_loc_x(self.symbol, index) } {
             -1 => None,
             x  => Some(x as u32),
         }
     }
     pub fn loc_y(&self, index: u32) -> Option<u32> {
-        match unsafe { zbar_symbol_get_loc_y(**self, index) } {
+        match unsafe { ffi::zbar_symbol_get_loc_y(self.symbol, index) } {
             -1 => None,
             y  => Some(y as u32),
         }
@@ -66,20 +75,20 @@ impl Symbol  {
     fn loc(&self, index: u32) -> Option<(u32, u32)> {
         self.loc_x(index).map(|x| (x, self.loc_y(index).unwrap()))
     }
-    pub fn next(&self) -> Option<Self> { Self::from_raw(unsafe { zbar_symbol_next(**self) }) }
-    pub fn components(&self) -> Option<SymbolSet> {
-        SymbolSet::from_raw(unsafe { zbar_symbol_get_components(**self) } )
+    pub fn next(&self) -> Option<Self> { Self::from_raw(unsafe { ffi::zbar_symbol_next(self.symbol) }) }
+    pub fn components(&self) -> Option<ZBarSymbolSet> {
+        ZBarSymbolSet::from_raw(unsafe { ffi::zbar_symbol_get_components(self.symbol) } )
     }
     pub fn first_component(&self) -> Option<Self> {
-        Self::from_raw(unsafe { zbar_symbol_first_component(**self) } )
+        Self::from_raw(unsafe { ffi::zbar_symbol_first_component(self.symbol) } )
     }
     /// Returns a xml representation of the `Symbol`.
     pub fn xml(&self) -> &str {
+        let cstr_buf = CString::new("").unwrap();
         unsafe {
-            let cstr_buf = CString::new("").unwrap();
             from_cstr(
-                zbar_symbol_xml(
-                    **self,
+                ffi::zbar_symbol_xml(
+                    self.symbol,
                     cstr_buf.as_ptr() as *mut *mut i8,
                     &mut 0_u32 as *mut u32
                 )
@@ -88,50 +97,49 @@ impl Symbol  {
     }
 
     pub fn polygon(&self) -> Polygon { self.clone().into() }
+}
 
-    #[cfg(feature = "zbar_fork")]
-    pub fn configs(&self) -> u32 { unsafe { zbar_symbol_get_configs(**self) } }
-
-    #[cfg(feature = "zbar_fork")]
-    pub fn modifiers(&self) -> u32 { unsafe { zbar_symbol_get_modifiers(**self) } }
-
-    #[cfg(feature = "zbar_fork")]
+#[cfg(feature = "zbar_fork")]
+impl ZBarSymbol {
+    pub fn configs(&self) -> u32 { unsafe { ffi::zbar_symbol_get_configs(self.symbol) } }
+    pub fn modifiers(&self) -> u32 { unsafe { ffi::zbar_symbol_get_modifiers(self.symbol) } }
     pub fn orientation(&self) -> ZBarOrientation {
-        unsafe { zbar_symbol_get_orientation (**self) }
+        unsafe { ffi::zbar_symbol_get_orientation (self.symbol) }
     }
 }
-impl Clone for Symbol {
+
+impl Clone for ZBarSymbol {
     fn clone(&self) -> Self {
         let symbol = Self { symbol: self.symbol };
         symbol.set_ref(1);
         symbol
     }
 }
-impl Deref for Symbol {
-    type Target = *const zbar_symbol_s;
+impl Deref for ZBarSymbol {
+    type Target = *const ffi::zbar_symbol_s;
     fn deref(&self) -> &Self::Target { &self.symbol }
 }
-impl Drop for Symbol {
+impl Drop for ZBarSymbol {
     fn drop(&mut self) { self.set_ref(-1); }
 }
 
 pub struct Polygon {
-    symbol: Symbol
+    symbol: ZBarSymbol
 }
 impl Polygon {
     pub fn point(&self, index: u32) -> Option<(u32, u32)> { self.symbol.loc(index) }
     pub fn iter(&self) -> PolygonIter { self.symbol.clone().into() }
 }
-impl From<Symbol> for Polygon  {
-    fn from(symbol: Symbol) -> Self { Self { symbol } }
+impl From<ZBarSymbol> for Polygon  {
+    fn from(symbol: ZBarSymbol) -> Self { Self { symbol } }
 }
 
 pub struct PolygonIter {
-    symbol: Symbol,
+    symbol: ZBarSymbol,
     index: u32,
 }
-impl From<Symbol> for PolygonIter   {
-    fn from(symbol: Symbol) -> Self { PolygonIter { symbol, index: 0 } }
+impl From<ZBarSymbol> for PolygonIter   {
+    fn from(symbol: ZBarSymbol) -> Self { PolygonIter { symbol, index: 0 } }
 }
 impl Iterator for PolygonIter  {
     type Item = (u32, u32);
@@ -144,8 +152,12 @@ impl Iterator for PolygonIter  {
 
 #[cfg(test)]
 mod test {
-    use std::path::Path;
+    use std::{
+        path::Path,
+        ptr
+    };
     use super::*;
+    use ZBarConfig;
 
     #[cfg(feature = "zbar_fork")]
     const XML: &'static str =
@@ -166,7 +178,7 @@ mod test {
     fn test_from_raw() { create_symbol_en(); }
 
     #[test]
-    fn test_from_raw_null() { assert!(Symbol::from_raw(ptr::null()).is_none()); }
+    fn test_from_raw_null() { assert!(ZBarSymbol::from_raw(ptr::null()).is_none()); }
 
     #[test]
     fn test_symbol_type() {
@@ -271,23 +283,23 @@ mod test {
         assert_eq!(create_symbol_en().orientation(), ZBarOrientation::ZBAR_ORIENT_UP);
     }
 
-    fn create_symbol_en() -> Symbol {
+    fn create_symbol_en() -> ZBarSymbol {
         create_symbol_set_from("test/qr_hello-world.png").first_symbol().unwrap()
     }
 
-    fn create_symbol_multi() -> Symbol {
+    fn create_symbol_multi() -> ZBarSymbol {
         create_symbol_set_from("test/greetings.png").first_symbol().unwrap()
     }
 
-    fn create_symbol_set_from(path: impl AsRef<Path>) -> SymbolSet{
+    fn create_symbol_set_from(path: impl AsRef<Path>) -> ZBarSymbolSet {
         use prelude::{
-            Image,
-            ImageScanner
+            ZBarImage,
+            ZBarImageScanner
         };
 
-        let image = Image::from_path(&path).unwrap();
+        let image = ZBarImage::from_path(&path).unwrap();
 
-        let scanner = ImageScanner::builder()
+        let scanner = ZBarImageScanner::builder()
             .with_cache(false)
             .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
             .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 1)

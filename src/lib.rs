@@ -1,41 +1,45 @@
+#![deny(unused_extern_crates)]
+
 #![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
+#![cfg_attr(feature = "cargo-clippy", warn(cast_ptr_alignment))]
+
 #[cfg(feature = "from_image")]
 extern crate image as image_crate;
-#[cfg(any(feature = "from_image", test))]
+#[cfg(test)]
 #[macro_use]
 extern crate lazy_static;
 
+pub use ffi::{
+    zbar_color_e as ZBarColor,
+    zbar_config_e as ZBarConfig,
+    zbar_error_e as ZBarError,
+    zbar_symbol_type_e as ZBarSymbolType
+};
+#[cfg(feature = "zbar_fork")]
+pub use ffi::{
+    zbar_modifier_e as ZBarModifier,
+    zbar_orientation_e as ZBarOrientation
+};
 use std::{
-    borrow::Cow,
     error::Error,
     ffi::{
         CStr,
-        CString,
         OsString,
     },
     fmt,
     mem,
-    ops::Deref,
     os::raw::{
         c_char,
         c_void
     },
-    ptr,
 };
-pub use zbar_color_e as ZBarColor;
-pub use zbar_config_e as ZBarConfig;
-pub use zbar_error_e as ZBarError;
-#[cfg(feature = "zbar_fork")]
-pub use zbar_modifier_e as ZBarModifier;
-#[cfg(feature = "zbar_fork")]
-pub use zbar_orientation_e as ZBarOrientation;
-pub use zbar_symbol_type_e as ZBarSymbolType;
 
-include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
-
+#[allow(dead_code)]
+#[cfg_attr(feature = "cargo-clippy", allow(clippy))]
+mod ffi;
 pub mod format;
 pub mod image;
 pub mod symbol;
@@ -50,9 +54,7 @@ pub enum ZBarErrorType {
     Simple(i32),
     Complex(ZBarError)
 }
-impl Error for ZBarErrorType {
-    fn description(&self) -> &str { "ZBar error" }
-}
+impl Error for ZBarErrorType {}
 impl fmt::Debug for ZBarErrorType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "ZBar error")
@@ -90,36 +92,36 @@ impl From<i32> for ZBarErrorType {
 pub fn version() -> (u32, u32) {
     unsafe {
         let mut version = (0, 0);
-        zbar_version(&mut version.0 as *mut u32, &mut version.1 as *mut u32);
+        ffi::zbar_version(&mut version.0 as *mut u32, &mut version.1 as *mut u32);
         version
     }
 }
 
 pub fn set_verbosity(verbosity: i32) {
-    unsafe { zbar_set_verbosity(verbosity) }
+    unsafe { ffi::zbar_set_verbosity(verbosity) }
 }
 
 pub fn increase_verbosity() {
-    unsafe { zbar_increase_verbosity() }
+    unsafe { ffi::zbar_increase_verbosity() }
 }
 
 pub fn symbol_name(symbol_type: ZBarSymbolType) -> &'static str {
-    unsafe { from_cstr(zbar_get_symbol_name(symbol_type)) }
+    unsafe { from_cstr(ffi::zbar_get_symbol_name(symbol_type)) }
 }
 
 #[cfg(feature = "zbar_fork")]
 pub fn config_name(config: ZBarConfig) -> &'static str {
-    unsafe { from_cstr(zbar_get_config_name(config)) }
+    unsafe { from_cstr(ffi::zbar_get_config_name(config)) }
 }
 
 #[cfg(feature = "zbar_fork")]
 pub fn modifier_name(modifier: ZBarModifier) -> &'static str {
-    unsafe { from_cstr(zbar_get_modifier_name(modifier)) }
+    unsafe { from_cstr(ffi::zbar_get_modifier_name(modifier)) }
 }
 
 #[cfg(feature = "zbar_fork")]
 pub fn orientation_name(orientation: ZBarOrientation) -> &'static str {
-    unsafe { from_cstr(zbar_get_orientation_name(orientation)) }
+    unsafe { from_cstr(ffi::zbar_get_orientation_name(orientation)) }
 }
 
 pub fn parse_config(config_string: impl AsRef<str>) -> ZBarResult<(ZBarSymbolType, ZBarConfig, i32)> {
@@ -128,7 +130,7 @@ pub fn parse_config(config_string: impl AsRef<str>) -> ZBarResult<(ZBarSymbolTyp
         let mut config = ZBarConfig::ZBAR_CFG_ENABLE;
         let mut value = 0;
 
-        match zbar_parse_config(
+        match ffi::zbar_parse_config(
             as_char_ptr(config_string),
             &mut symbol_type as *mut ZBarSymbolType,
             &mut config as *mut ZBarConfig,
@@ -141,7 +143,9 @@ pub fn parse_config(config_string: impl AsRef<str>) -> ZBarResult<(ZBarSymbolTyp
     }
 }
 
-pub(crate) unsafe fn error_code(object: *const c_void) -> ZBarError { _zbar_get_error_code(object) }
+pub(crate) unsafe fn error_code(object: *const c_void) -> ZBarError {
+    ffi::_zbar_get_error_code(object)
+}
 
 //pub fn addon_name()
 

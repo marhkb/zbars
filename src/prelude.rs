@@ -1,10 +1,10 @@
 pub use {
-    ZBarSymbolType,
-    ZBarConfig,
     format::Format,
-    image::Image,
-    symbol_set::SymbolSet,
-    symbol::Symbol,
-    image_scanner::ImageScanner,
-    processor::Processor,
+    image::ZBarImage,
+    image_scanner::ZBarImageScanner,
+    processor::ZBarProcessor,
+    symbol::ZBarSymbol,
+    symbol_set::ZBarSymbolSet,
+    ZBarConfig,
+    ZBarSymbolType,
 };

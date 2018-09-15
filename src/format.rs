@@ -1,5 +1,10 @@
-use super::*;
-use std::str::from_utf8;
+use std::{
+    mem,
+    str::from_utf8
+};
+
+pub const Y800: Format = Format(0x5945_5247);
+pub const Y8: Format = Format(0x2020_3859);
 
 /// A FOURCC code (https://www.fourcc.org/fourcc.php)
 ///
@@ -43,7 +48,7 @@ impl Format {
     /// println!("{}", format.value());
     ///
     /// ```
-    pub fn from_value(value: u32) -> Self { Format(value) }
+    pub fn from_value(value: u32) -> Self { value.into() }
     /// Creates a `Format` from the given FOURCC label and lets `Format` borrow that label.
     ///
     /// # Examples
@@ -64,24 +69,29 @@ impl Format {
     /// println!("{}", format.as_label());
     /// println!("{}", format.value());
     /// ```
-    pub fn from_label(label: impl AsRef<str>) -> Self {
+    pub fn from_label(label: &(impl AsRef<str> + ?Sized)) -> Self { label.into() }
+
+    /// Returns the FOURCC value for this `Format`
+    pub fn value(&self) -> u32 { self.into() }
+    pub fn as_label(&self) -> String { self.to_string() }
+}
+
+impl From<u32> for Format {
+    fn from(value: u32) -> Self { Format(value) }
+}
+impl<'a> From<&'a Format> for u32 {
+    fn from(format: &'a Format) -> Self { format.0 }
+}
+
+impl<'a, T> From<&'a T> for Format where T: AsRef<str> + ?Sized {
+    fn from(label: &'a T) -> Self {
         Format({
             let byte_slice = label.as_ref().as_bytes();
             let mut bytes = [32; 4];
-            for i in 0..byte_slice.len() {
-                bytes[i] = byte_slice[i];
-            }
+            bytes[..byte_slice.len()].clone_from_slice(byte_slice);
             unsafe { mem::transmute(bytes) }
         })
     }
-
-    /// Returns the FOURCC value for this `Format`
-    pub fn value(&self) -> u32 { self.0 }
-    pub fn as_label(&self) -> String { self.to_string() }
-}
-impl Deref for Format {
-    type Target = u32;
-    fn deref(&self) -> &Self::Target { &self.0 }
 }
 impl ToString for Format {
     fn to_string(&self) -> String {

@@ -1,11 +1,11 @@
+extern crate bindgen;
 #[cfg(unix)]
 extern crate pkg_config;
-extern crate bindgen;
 
 use std::{
+    borrow::Cow,
     env,
     path::PathBuf,
-    borrow::Cow,
 };
 
 fn main() {

@@ -1,32 +1,36 @@
 use {
-    image::*,
-    symbol_set::*
+    ffi,
+    image::ZBarImage,
+    symbol_set::ZBarSymbolSet,
+    ZBarConfig,
+    ZBarErrorType,
+    ZBarResult,
+    ZBarSymbolType
 };
-use super::*;
 
-pub struct ImageScanner {
-    scanner: *mut zbar_image_scanner_s,
+pub struct ZBarImageScanner {
+    pub(crate) scanner: *mut ffi::zbar_image_scanner_s,
 }
-impl ImageScanner {
+impl ZBarImageScanner {
     pub fn new() -> Self { Self::default() }
     pub fn builder() -> ImageScannerBuilder { ImageScannerBuilder::new() }
     pub fn set_config(&self, symbol_type: ZBarSymbolType, config: ZBarConfig, value: i32) -> ZBarResult<()> {
-        match unsafe { zbar_image_scanner_set_config(**self, symbol_type, config, value) } {
+        match unsafe { ffi::zbar_image_scanner_set_config(self.scanner, symbol_type, config, value) } {
             0 => Ok(()),
             e => Err(e.into())
         }
     }
     pub fn enable_cache(&self, enable: bool) {
-        unsafe { zbar_image_scanner_enable_cache(**self, enable as i32); }
+        unsafe { ffi::zbar_image_scanner_enable_cache(self.scanner, enable as i32); }
     }
-    pub fn recycle_image<T>(&self, image: &Image<T>) where T: AsRef<[u8]> + Clone {
-        unsafe { zbar_image_scanner_recycle_image(**self, **image) }
+    pub fn recycle_image<T>(&self, image: &ZBarImage<T>) {
+        unsafe { ffi::zbar_image_scanner_recycle_image(self.scanner, image.image) }
     }
-    pub fn results(&self) -> Option<SymbolSet> {
-        SymbolSet::from_raw(unsafe { zbar_image_scanner_get_results(**self) })
+    pub fn results(&self) -> Option<ZBarSymbolSet> {
+        ZBarSymbolSet::from_raw(unsafe { ffi::zbar_image_scanner_get_results(self.scanner) })
     }
-    pub fn scan_image<T>(&self, image: &Image<T>) -> ZBarResult<SymbolSet> where T: AsRef<[u8]> + Clone {
-        match unsafe { zbar_scan_image(**self, **image) } {
+    pub fn scan_image<T>(&self, image: &ZBarImage<T>) -> ZBarResult<ZBarSymbolSet> {
+        match unsafe { ffi::zbar_scan_image(self.scanner, image.image) } {
             -1 => Err(ZBarErrorType::Simple(-1)),
             // symbols can be unwrapped because image is surely scanned
             _  => Ok(image.symbols().unwrap()),
@@ -34,24 +38,21 @@ impl ImageScanner {
     }
 }
 
-unsafe impl Send for ImageScanner {}
+unsafe impl Send for ZBarImageScanner {}
 
-impl Default for ImageScanner {
+impl Default for ZBarImageScanner {
     fn default() -> Self {
-        let scanner = ImageScanner { scanner: unsafe { zbar_image_scanner_create() } };
-        // Think it is safe to unwrap here
+        let scanner = ZBarImageScanner { scanner: unsafe { ffi::zbar_image_scanner_create() } };
+        // safe to unwrap here
         scanner.set_config(ZBarSymbolType::ZBAR_NONE, ZBarConfig::ZBAR_CFG_ENABLE, 0).unwrap();
         scanner
     }
 }
-impl Deref for ImageScanner {
-    type Target = *mut zbar_image_scanner_s;
-    fn deref(&self) -> &Self::Target { &self.scanner }
-}
-impl Drop for ImageScanner {
-    fn drop(&mut self) { unsafe { zbar_image_scanner_destroy(**self) } }
+impl Drop for ZBarImageScanner {
+    fn drop(&mut self) { unsafe { ffi::zbar_image_scanner_destroy(self.scanner) } }
 }
 
+#[derive(Default)]
 pub struct ImageScannerBuilder {
     cache: bool,
     config: Vec<(ZBarSymbolType, ZBarConfig, i32)>,
@@ -65,8 +66,8 @@ impl ImageScannerBuilder {
     }
     pub fn with_cache(&mut self, cache: bool) -> &mut Self { self.cache = cache; self }
 
-    pub fn build(&self) -> ZBarResult<ImageScanner> {
-        let scanner = ImageScanner::new();
+    pub fn build(&self) -> ZBarResult<ZBarImageScanner> {
+        let scanner = ZBarImageScanner::new();
 
         self.config
             .iter()
@@ -82,11 +83,11 @@ impl ImageScannerBuilder {
 #[cfg(feature = "from_image")]
 mod test {
     use super::*;
-    use symbol::Symbol;
+    use symbol::ZBarSymbol;
 
     #[test]
     fn test_qrcode() {
-        let image = Image::from_path("test/qr_hello-world.png").unwrap();
+        let image = ZBarImage::from_path("test/qr_hello-world.png").unwrap();
 
         let scanner = ImageScannerBuilder::new()
             .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 1)
@@ -105,7 +106,7 @@ mod test {
 
     #[test]
     fn test_qrcode_disabled() {
-        let image = Image::from_path("test/qr_hello-world.png").unwrap();
+        let image = ZBarImage::from_path("test/qr_hello-world.png").unwrap();
 
         let scanner = ImageScannerBuilder::new()
             .with_config(ZBarSymbolType::ZBAR_QRCODE, ZBarConfig::ZBAR_CFG_ENABLE, 0)
@@ -116,7 +117,7 @@ mod test {
         assert!(image.first_symbol().is_none());
     }
 
-    fn assert_qrcode(symbol: Symbol) {
+    fn assert_qrcode(symbol: ZBarSymbol) {
         assert_eq!(symbol.symbol_type(), ZBarSymbolType::ZBAR_QRCODE);
         assert_eq!(symbol.data(), "Hello World");
         assert_eq!(symbol.next().is_none(), true);
@@ -124,7 +125,7 @@ mod test {
 
     #[test]
     fn test_code128() {
-        let image = Image::from_path("test/code128.gif").unwrap();
+        let image = ZBarImage::from_path("test/code128.gif").unwrap();
 
         let scanner = ImageScannerBuilder::new()
             .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 1)
@@ -143,7 +144,7 @@ mod test {
 
     #[test]
     fn test_code128_disabled() {
-        let image = Image::from_path("test/code128.gif").unwrap();
+        let image = ZBarImage::from_path("test/code128.gif").unwrap();
 
         let scanner = ImageScannerBuilder::new()
             .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 0)
@@ -154,7 +155,7 @@ mod test {
         assert!(image.first_symbol().is_none());
     }
 
-    fn assert_code128(symbol: Symbol) {
+    fn assert_code128(symbol: ZBarSymbol) {
         assert_eq!(symbol.symbol_type(), ZBarSymbolType::ZBAR_CODE128);
         assert_eq!(symbol.data(), "Screwdriver");
         assert_eq!(symbol.next().is_none(), true);
@@ -162,7 +163,7 @@ mod test {
 
     #[test]
     fn test_recycle_image() {
-        let image = Image::from_path("test/code128.gif").unwrap();
+        let image = ZBarImage::from_path("test/code128.gif").unwrap();
 
         let scanner = ImageScannerBuilder::new()
             .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 1)
