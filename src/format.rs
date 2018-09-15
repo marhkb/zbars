@@ -17,7 +17,6 @@ pub const Y8: Format = Format(0x2020_3859);
 ///
 /// ```
 /// use zbars::prelude::Format;
-/// use std::borrow::Cow;
 ///
 /// // create Format that borrows the given label
 /// let format = Format::from_label("Y800");
@@ -57,7 +56,6 @@ impl Format {
     ///
     /// ```
     /// use zbars::prelude::Format;
-    /// use std::borrow::Cow;
     ///
     /// // create Format that borrows the given label
     /// let format = Format::from_label("Y800");

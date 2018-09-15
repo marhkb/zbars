@@ -2,9 +2,11 @@ use {
     ffi,
     from_cstr,
     symbol_set::ZBarSymbolSet,
-    ZBarOrientation,
     ZBarSymbolType
 };
+#[cfg(feature = "zbar_fork")]
+use ZBarOrientation;
+
 use std::{
     ffi::CString,
     ops::Deref,
