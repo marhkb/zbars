@@ -11,6 +11,8 @@ extern crate image as image_crate;
 #[cfg(test)]
 #[macro_use]
 extern crate lazy_static;
+#[macro_use]
+extern crate log;
 
 pub use ffi::{
     zbar_color_e as ZBarColor,

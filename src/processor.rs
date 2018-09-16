@@ -9,9 +9,10 @@ use {
     ZBarResult,
     ZBarSymbolType,
 };
+use std::ptr;
 
 pub struct ZBarProcessor {
-    pub(crate) processor: *mut ffi::zbar_processor_s,
+    processor: *mut ffi::zbar_processor_s,
 }
 impl ZBarProcessor {
     pub fn new(threaded: bool) -> Self {
@@ -95,7 +96,9 @@ impl ZBarProcessor {
         }
     }
     pub fn get_results(&self) -> Option<ZBarSymbolSet> {
-        ZBarSymbolSet::from_raw(unsafe { ffi::zbar_processor_get_results(self.processor) })
+        ZBarSymbolSet::from_raw(
+            unsafe { ffi::zbar_processor_get_results(self.processor) }, ptr::null_mut()
+        )
     }
 
     // Tested
@@ -117,7 +120,7 @@ impl ZBarProcessor {
 
     // Tested
     pub fn process_image<T>(&self, image: &ZBarImage<T>) -> ZBarResult<ZBarSymbolSet> {
-        match unsafe { ffi::zbar_process_image(self.processor, image.image) } {
+        match unsafe { ffi::zbar_process_image(self.processor, image.image()) } {
             -1 => Err(ZBarErrorType::Simple(-1)),
             _  => Ok(image.symbols().unwrap()), // symbols can be unwrapped because image is surely scanned
         }

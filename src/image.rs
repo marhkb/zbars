@@ -28,6 +28,8 @@ use std::{
 
 pub type Result<T> = ::std::result::Result<ZBarImage<T>, ZBarImageError>;
 
+unsafe extern fn image_destroyed_handler(_: *mut ffi::zbar_image_s) { trace!("free image"); }
+
 #[derive(Debug)]
 pub enum ZBarImageError {
     Len(u32, u32, usize),
@@ -47,11 +49,11 @@ impl fmt::Display for ZBarImageError {
 }
 
 pub struct ZBarImage<T> {
-    pub(crate) image: *mut ffi::zbar_image_s,
+    image: *mut ffi::zbar_image_s,
     data: T,
 }
 impl<T> ZBarImage<T> {
-    fn set_ref(&self, refs: i32) { unsafe { ffi::zbar_image_ref(self.image, refs) } }
+    pub(crate) fn image(&self) -> *mut ffi::zbar_image_s { self.image }
     /// Returns the `Format` of the pixels.
     pub fn format(&self) -> Format {
         unsafe { (ffi::zbar_image_get_format(self.image) as u32).into() }
@@ -94,15 +96,18 @@ impl<T> ZBarImage<T> {
     /// };
     /// ```
     pub fn symbols(&self) -> Option<ZBarSymbolSet> {
-        ZBarSymbolSet::from_raw(unsafe { ffi::zbar_image_get_symbols(self.image) })
+        ZBarSymbolSet::from_raw(unsafe { ffi::zbar_image_get_symbols(self.image) }, self.image)
     }
     pub fn set_symbols(&self, symbols: Option<&ZBarSymbolSet>) {
         unsafe {
-            ffi::zbar_image_set_symbols(self.image, symbols.map_or(ptr::null(), |s| s.symbol_set))
+            ffi::zbar_image_set_symbols(
+                self.image,
+                symbols.map_or(ptr::null(), ZBarSymbolSet::symbol_set)
+            )
         }
     }
     pub fn first_symbol(&self) -> Option<ZBarSymbol> {
-        ZBarSymbol::from_raw(unsafe { ffi::zbar_image_first_symbol(self.image) })
+        ZBarSymbol::from_raw(unsafe { ffi::zbar_image_first_symbol(self.image) }, self.image)
     }
     pub fn set_sequence(&self, sequence_num: u32) {
         unsafe { ffi::zbar_image_set_sequence(self.image, sequence_num) }
@@ -159,6 +164,7 @@ impl<T> ZBarImage<T> {
         unsafe { ffi::zbar_image_set_crop(self.image, x, y, width, height) }
     }
 }
+
 impl<T> ZBarImage<T> where T: AsRef<[u8]> {
     pub fn new(width: u32, height: u32, format: Format, data: T) -> Result<T> {
         if width as usize * height as usize == data.as_ref().len() {
@@ -170,10 +176,9 @@ impl<T> ZBarImage<T> where T: AsRef<[u8]> {
                     image,
                     data.as_ref().as_ptr() as *mut c_void,
                     (data.as_ref().len() as u32).into(),
-                    None
+                    Some(image_destroyed_handler)
                 );
                 let image = Self { image, data };
-                image.set_ref(1);
                 Ok(image)
             }
         } else {
@@ -273,7 +278,7 @@ impl From<DynamicImage> for ZBarImage<Vec<u8>> {
 }
 
 impl<I> Drop for ZBarImage<I> {
-    fn drop(&mut self) { self.set_ref(-1); }
+    fn drop(&mut self) { unsafe { ffi::zbar_image_ref(self.image, -1) } }
 }
 
 #[cfg(test)]

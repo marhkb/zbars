@@ -14,21 +14,25 @@ use std::{
 
 
 pub struct ZBarSymbol {
-    pub(crate) symbol: *const ffi::zbar_symbol_s,
+    symbol: *const ffi::zbar_symbol_s,
+    image: *mut ffi::zbar_image_s
 }
 impl ZBarSymbol {
     /// Creates a new `SymbolSet` from raw data.
-    pub(crate) fn from_raw(symbol: *const ffi::zbar_symbol_s) -> Option<Self> {
+    pub(crate) fn from_raw(
+        symbol: *const ffi::zbar_symbol_s,
+        image: *mut ffi::zbar_image_s) -> Option<Self>
+    {
         if !symbol.is_null() {
-            let symbol = Self { symbol };
-            symbol.set_ref(1);
+            let symbol = Self { symbol, image };
+            if !image.is_null() {
+                unsafe { ffi::zbar_image_ref(image, 1) }
+            }
             Some(symbol)
         } else {
             None
         }
     }
-    /// Increases or decreases the reference count.
-    fn set_ref(&self, refs: i32) { unsafe { ffi::zbar_symbol_ref(self.symbol, refs) } }
 
     pub fn symbol_type(&self) -> ZBarSymbolType {
         unsafe { ffi::zbar_symbol_get_type(self.symbol) }
@@ -77,12 +81,14 @@ impl ZBarSymbol {
     fn loc(&self, index: u32) -> Option<(u32, u32)> {
         self.loc_x(index).map(|x| (x, self.loc_y(index).unwrap()))
     }
-    pub fn next(&self) -> Option<Self> { Self::from_raw(unsafe { ffi::zbar_symbol_next(self.symbol) }) }
+    pub fn next(&self) -> Option<Self> {
+        Self::from_raw(unsafe { ffi::zbar_symbol_next(self.symbol) }, self.image)
+    }
     pub fn components(&self) -> Option<ZBarSymbolSet> {
-        ZBarSymbolSet::from_raw(unsafe { ffi::zbar_symbol_get_components(self.symbol) } )
+        ZBarSymbolSet::from_raw(unsafe { ffi::zbar_symbol_get_components(self.symbol) }, self.image)
     }
     pub fn first_component(&self) -> Option<Self> {
-        Self::from_raw(unsafe { ffi::zbar_symbol_first_component(self.symbol) } )
+        Self::from_raw(unsafe { ffi::zbar_symbol_first_component(self.symbol) }, self.image)
     }
     /// Returns a xml representation of the `Symbol`.
     pub fn xml(&self) -> &str {
@@ -111,18 +117,18 @@ impl ZBarSymbol {
 }
 
 impl Clone for ZBarSymbol {
-    fn clone(&self) -> Self {
-        let symbol = Self { symbol: self.symbol };
-        symbol.set_ref(1);
-        symbol
-    }
+    fn clone(&self) -> Self { Self::from_raw(self.symbol, self.image).unwrap() }
 }
 impl Deref for ZBarSymbol {
     type Target = *const ffi::zbar_symbol_s;
     fn deref(&self) -> &Self::Target { &self.symbol }
 }
 impl Drop for ZBarSymbol {
-    fn drop(&mut self) { self.set_ref(-1); }
+    fn drop(&mut self) {
+        if !self.image.is_null() {
+            unsafe { ffi::zbar_image_ref(self.image, -1) }
+        }
+    }
 }
 
 pub struct Polygon {
@@ -180,7 +186,9 @@ mod test {
     fn test_from_raw() { create_symbol_en(); }
 
     #[test]
-    fn test_from_raw_null() { assert!(ZBarSymbol::from_raw(ptr::null()).is_none()); }
+    fn test_from_raw_null() {
+        assert!(ZBarSymbol::from_raw(ptr::null(), ptr::null_mut()).is_none());
+    }
 
     #[test]
     fn test_symbol_type() {
