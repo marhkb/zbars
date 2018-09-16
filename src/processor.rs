@@ -232,13 +232,7 @@ impl ZBarProcessorBuilder {
 
 #[cfg(test)]
 mod test {
-    use std::sync::{
-        Arc,
-        Mutex,
-    };
     use super::*;
-
-    lazy_static! { static ref VIDEO_LOCK: Arc<Mutex<()>> = { Arc::new(Mutex::new(())) }; }
 
     #[test]
     fn test_wrong_video_device() {
@@ -273,6 +267,12 @@ mod test {
 
     #[test]
     #[cfg(feature = "zbar_fork")]
+    fn test_control_get_set() {
+        test_control();
+        test_set_control();
+    }
+
+    #[cfg(feature = "zbar_fork")]
     fn test_set_control() {
         let processor = ZBarProcessor::builder()
             .threaded(true)
@@ -281,14 +281,11 @@ mod test {
             .build()
             .unwrap();
 
-        let _lock = VIDEO_LOCK.lock().unwrap();
-
         processor.init("/dev/video0", false).unwrap();
         assert!(processor.set_control("brightness", 100).is_ok());
         assert!(processor.set_control("contrast", 100).is_ok());
     }
 
-    #[test]
     #[cfg(feature = "zbar_fork")]
     fn test_control() {
         let processor = ZBarProcessor::builder()
@@ -297,8 +294,6 @@ mod test {
             .with_config(ZBarSymbolType::ZBAR_CODE128, ZBarConfig::ZBAR_CFG_ENABLE, 1)
             .build()
             .unwrap();
-
-        let _lock = VIDEO_LOCK.lock().unwrap();
 
         processor.init("/dev/video0", false).unwrap();
         assert!(processor.control("brightness").is_ok());
