@@ -37,6 +37,7 @@ use std::{
     },
 };
 
+pub mod decoder;
 #[allow(dead_code)]
 #[cfg_attr(feature = "cargo-clippy", allow(clippy))]
 mod ffi;
