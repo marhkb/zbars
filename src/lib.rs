@@ -53,16 +53,12 @@ pub mod prelude;
 
 pub type ZBarResult<T> = Result<T, ZBarErrorType>;
 
+#[derive(Debug)]
 pub enum ZBarErrorType {
     Simple(i32),
     Complex(ZBarError)
 }
 impl Error for ZBarErrorType {}
-impl fmt::Debug for ZBarErrorType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "ZBar error")
-    }
-}
 impl fmt::Display for ZBarErrorType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use ZBarError::*;
@@ -82,8 +78,8 @@ impl fmt::Display for ZBarErrorType {
                 ZBAR_ERR_CLOSED => write!(f, "output window is closed"),
                 ZBAR_ERR_WINAPI => write!(f, "windows system error"),
                 ZBAR_ERR_NUM => write!(f, "number of error codes"),
-                _ => panic!(),
-            }
+                ZBAR_OK => write!(f, "success")
+             }
         }
     }
 }
