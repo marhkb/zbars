@@ -1,5 +1,9 @@
 pub use {
-    format::Format,
+    format::{
+        Format,
+        Y8,
+        Y800,
+    },
     image::ZBarImage,
     image_scanner::ZBarImageScanner,
     processor::ZBarProcessor,

@@ -20,10 +20,12 @@ use image_crate::{
 };
 use std::{
     error::Error,
+    rc::Rc,
     fmt,
     os::raw::c_void,
     path::Path,
-    ptr
+    ptr,
+    slice::from_raw_parts
 };
 
 pub type Result<T> = ::std::result::Result<ZBarImage<T>, ZBarImageError>;
@@ -50,9 +52,10 @@ impl fmt::Display for ZBarImageError {
 
 pub struct ZBarImage<T> {
     image: *mut ffi::zbar_image_s,
-    data: T,
+    data: Rc<T>,
 }
 impl<T> ZBarImage<T> {
+    fn set_ref(&self, refs: i32) { unsafe { ffi::zbar_image_ref(self.image, refs) } }
     pub(crate) fn image(&self) -> *mut ffi::zbar_image_s { self.image }
     /// Returns the `Format` of the pixels.
     pub fn format(&self) -> Format {
@@ -74,7 +77,14 @@ impl<T> ZBarImage<T> {
     /// let image = ZBarImage::new(1, 1, Format::from_label("Y8"), vec![1]).unwrap();
     /// println!("{:?}", image.data());
     /// ```
-    pub fn data(&self) -> &T { &self.data }
+    pub fn data(&self) -> &[u8] {
+        unsafe {
+            from_raw_parts(
+                ffi::zbar_image_get_data(self.image) as *const u8,
+                ffi::zbar_image_get_data_length(self.image) as usize
+            )
+        }
+    }
     /// Returns an `Option` containing the `SymbolSet` or `None` if the image hasn't been scanned.
     ///
     /// # Examples
@@ -166,6 +176,14 @@ impl<T> ZBarImage<T> {
 }
 
 impl<T> ZBarImage<T> where T: AsRef<[u8]> {
+    /// ```compile_fail
+    /// use zbars::prelude::*;
+    ///
+    /// let image = {
+    ///     let data = vec![];
+    ///     ZBarImage::new(0, 0, Y800, &data)
+    /// };
+    /// ```
     pub fn new(width: u32, height: u32, format: Format, data: T) -> Result<T> {
         if width as usize * height as usize == data.as_ref().len() {
             unsafe {
@@ -178,8 +196,7 @@ impl<T> ZBarImage<T> where T: AsRef<[u8]> {
                     (data.as_ref().len() as u32).into(),
                     Some(image_destroyed_handler)
                 );
-                let image = Self { image, data };
-                Ok(image)
+                Ok(Self { image, data: data.into() })
             }
         } else {
             Err(ZBarImageError::Len(width, height, data.as_ref().len()))
@@ -277,8 +294,16 @@ impl From<DynamicImage> for ZBarImage<Vec<u8>> {
     }
 }
 
-impl<I> Drop for ZBarImage<I> {
-    fn drop(&mut self) { unsafe { ffi::zbar_image_ref(self.image, -1) } }
+impl<T> Clone for ZBarImage<T> {
+    fn clone(&self) -> Self {
+        let image = Self { image: self.image, data: self.data.clone() };
+        image.set_ref(1);
+        image
+    }
+}
+
+impl<T> Drop for ZBarImage<T> {
+    fn drop(&mut self) { self.set_ref(-1) }
 }
 
 #[cfg(test)]
@@ -286,6 +311,25 @@ mod test {
     #[cfg(feature = "from_image")]
     use image_crate::ImageBuffer;
     use super::*;
+
+    #[test]
+    fn test_clone_owned() {
+        let image =  ZBarImage::new(2, 3, Y800, vec![0; 2 * 3]).unwrap();
+        {
+            let _clone = image.clone();
+        }
+        assert_eq!(image.data(), &[0; 2 * 3])
+    }
+
+    #[test]
+    fn test_clone_ref() {
+        let data = vec![0; 2 * 3];
+        let image =  ZBarImage::new(2, 3, Y800, &data).unwrap();
+        {
+            let _clone = image.clone();
+        }
+        assert_eq!(image.data(), &[0; 2 * 3])
+    }
 
     #[test]
     fn format() {
