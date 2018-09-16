@@ -130,7 +130,9 @@ impl<T> ZBarImage<T> {
 
     /// Writes image on `ZBar format` to the given path.
     pub fn write(&self, path: impl AsRef<Path>) -> ZBarResult<()> {
-        match unsafe { ffi::zbar_image_write(self.image, as_char_ptr(path.as_ref().to_str().unwrap())) } {
+        match unsafe {
+            ffi::zbar_image_write(self.image, as_char_ptr(path.as_ref().to_str().unwrap()))
+        } {
             0 => Ok(()),
             e => Err(e.into()),
         }

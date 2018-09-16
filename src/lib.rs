@@ -121,11 +121,10 @@ pub fn orientation_name(orientation: ZBarOrientation) -> &'static str {
 }
 
 pub fn parse_config(config_string: impl AsRef<str>) -> ZBarResult<(ZBarSymbolType, ZBarConfig, i32)> {
+    let mut symbol_type = ZBarSymbolType::ZBAR_NONE;
+    let mut config = ZBarConfig::ZBAR_CFG_ENABLE;
+    let mut value = 0;
     unsafe {
-        let mut symbol_type = ZBarSymbolType::ZBAR_NONE;
-        let mut config = ZBarConfig::ZBAR_CFG_ENABLE;
-        let mut value = 0;
-
         match ffi::zbar_parse_config(
             as_char_ptr(config_string),
             &mut symbol_type as *mut ZBarSymbolType,
@@ -135,7 +134,6 @@ pub fn parse_config(config_string: impl AsRef<str>) -> ZBarResult<(ZBarSymbolTyp
             0 => Ok((symbol_type, config, value)),
             e => Err(ZBarErrorType::Simple(e))
         }
-
     }
 }
 

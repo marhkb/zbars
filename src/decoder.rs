@@ -11,7 +11,13 @@ pub struct Decoder {
 
 impl Decoder {
     pub fn new() -> Self { Self::default() }
-    pub fn set_config(&self, symbol_type: ZBarSymbolType, config: ZBarConfig, value: i32) -> ZBarResult<()> {
+    pub fn set_config(
+        &self,
+        symbol_type: ZBarSymbolType,
+        config: ZBarConfig,
+        value: i32
+    ) -> ZBarResult<()>
+    {
         match unsafe { ffi::zbar_decoder_set_config(self.decoder, symbol_type, config, value) } {
             0 => Ok(()),
             e => Err(e.into())

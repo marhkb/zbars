@@ -28,7 +28,11 @@ impl ZBarProcessor {
 
     //Tested
     pub fn init(&self, video_device: impl AsRef<str>, enable_display: bool) -> ZBarResult<()> {
-        match unsafe { ffi::zbar_processor_init(self.processor, as_char_ptr(video_device), enable_display as i32) } {
+        match unsafe {
+            ffi::zbar_processor_init(
+                self.processor, as_char_ptr(video_device), enable_display as i32,
+            )
+        } {
             0 => Ok(()),
             e => Err(ZBarErrorType::Simple(e)),
         }
@@ -67,8 +71,16 @@ impl ZBarProcessor {
         }
     }
 
-    pub fn set_config(&mut self, symbol_type: ZBarSymbolType, config: ZBarConfig, value: i32) -> ZBarResult<()> {
-        match unsafe { ffi::zbar_processor_set_config(self.processor, symbol_type, config, value) }  {
+    pub fn set_config(
+        &mut self,
+        symbol_type: ZBarSymbolType,
+        config: ZBarConfig,
+        value: i32
+    ) -> ZBarResult<()>
+    {
+        match unsafe {
+            ffi::zbar_processor_set_config(self.processor, symbol_type, config, value)
+        } {
             0 => Ok(()),
             e => Err(e.into())
         }
@@ -141,7 +153,9 @@ impl ZBarProcessor {
     /// processor.set_control("contrast", 50).unwrap();
     /// ```
     pub fn set_control(&self, control_name: impl AsRef<str>, value: i32) -> ZBarResult<()> {
-        match unsafe { ffi::zbar_processor_set_control(self.processor, as_char_ptr(control_name), value) } {
+        match unsafe {
+            ffi::zbar_processor_set_control(self.processor, as_char_ptr(control_name), value)
+        } {
             0 => Ok(()),
             e => Err(ZBarErrorType::Simple(e))
         }
@@ -162,7 +176,9 @@ impl ZBarProcessor {
     pub fn control(&self, control_name: impl AsRef<str>) -> ZBarResult<i32> {
         let mut value = 0;
         match unsafe {
-            ffi::zbar_processor_get_control(self.processor, as_char_ptr(control_name), &mut value as *mut i32)
+            ffi::zbar_processor_get_control(
+                self.processor, as_char_ptr(control_name), &mut value as *mut i32
+            )
         } {
             0 => Ok(value),
             e => Err(ZBarErrorType::Simple(e))
@@ -206,7 +222,13 @@ impl ZBarProcessorBuilder {
     pub fn with_format(&mut self, format: Option<(Format, Format)>) -> &mut Self {
         self.format = format; self
     }
-    pub fn with_config(&mut self, symbol_type: ZBarSymbolType, config: ZBarConfig, value: i32) -> &mut Self {
+    pub fn with_config(
+        &mut self,
+        symbol_type: ZBarSymbolType,
+        config: ZBarConfig,
+        value: i32
+    ) -> &mut Self
+    {
         self.config.push((symbol_type, config, value)); self
     }
     pub fn build(&self) -> ZBarResult<ZBarProcessor> {

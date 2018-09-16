@@ -68,7 +68,13 @@ impl ImageScannerBuilder {
     pub fn new() -> Self {
         Self { cache: false, config: vec![], }
     }
-    pub fn with_config(&mut self, symbol_type: ZBarSymbolType, config: ZBarConfig, value: i32) -> &mut Self {
+    pub fn with_config(
+        &mut self,
+        symbol_type: ZBarSymbolType,
+        config: ZBarConfig,
+        value: i32
+    ) -> &mut Self
+    {
         self.config.push((symbol_type, config, value)); self
     }
     pub fn with_cache(&mut self, cache: bool) -> &mut Self { self.cache = cache; self }
