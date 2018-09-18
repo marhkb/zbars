@@ -1,16 +1,13 @@
 use {
     ffi,
     from_cstr,
+    image,
     symbol_set::ZBarSymbolSet,
     ZBarSymbolType
 };
+use std::ffi::CString;
 #[cfg(feature = "zbar_fork")]
 use ZBarOrientation;
-
-use std::{
-    ffi::CString,
-    ops::Deref,
-};
 
 
 pub struct ZBarSymbol {
@@ -25,9 +22,7 @@ impl ZBarSymbol {
     {
         if !symbol.is_null() {
             let symbol = Self { symbol, image };
-            if !image.is_null() {
-                unsafe { ffi::zbar_image_ref(image, 1) }
-            }
+            image::set_ref(image, 1);
             Some(symbol)
         } else {
             None
@@ -119,16 +114,8 @@ impl ZBarSymbol {
 impl Clone for ZBarSymbol {
     fn clone(&self) -> Self { Self::from_raw(self.symbol, self.image).unwrap() }
 }
-impl Deref for ZBarSymbol {
-    type Target = *const ffi::zbar_symbol_s;
-    fn deref(&self) -> &Self::Target { &self.symbol }
-}
 impl Drop for ZBarSymbol {
-    fn drop(&mut self) {
-        if !self.image.is_null() {
-            unsafe { ffi::zbar_image_ref(self.image, -1) }
-        }
-    }
+    fn drop(&mut self) { image::set_ref(self.image, -1) }
 }
 
 pub struct Polygon {

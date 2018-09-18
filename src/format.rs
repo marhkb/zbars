@@ -1,6 +1,6 @@
 use std::{
     mem,
-    str::from_utf8
+    str::from_utf8,
 };
 
 pub const Y800: Format = Format(0x5945_5247);

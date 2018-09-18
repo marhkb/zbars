@@ -50,13 +50,19 @@ impl fmt::Display for ZBarImageError {
     }
 }
 
+pub(crate) fn set_ref(image: *mut ffi::zbar_image_s, refs: i32) {
+    if !image.is_null() {
+        unsafe { ffi::zbar_image_ref(image, refs) }
+    }
+}
+
 pub struct ZBarImage<T> {
     image: *mut ffi::zbar_image_s,
     data: Rc<T>,
 }
 impl<T> ZBarImage<T> {
-    fn set_ref(&self, refs: i32) { unsafe { ffi::zbar_image_ref(self.image, refs) } }
     pub(crate) fn image(&self) -> *mut ffi::zbar_image_s { self.image }
+    fn set_ref(&self, refs: i32) { set_ref(self.image, refs) }
     /// Returns the `Format` of the pixels.
     pub fn format(&self) -> Format {
         unsafe { (ffi::zbar_image_get_format(self.image) as u32).into() }

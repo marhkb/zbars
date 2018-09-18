@@ -1,5 +1,6 @@
 use {
     ffi,
+    image,
     symbol::ZBarSymbol
 };
 use std::mem;
@@ -16,9 +17,7 @@ impl ZBarSymbolSet {
     {
         if !symbol_set.is_null() {
             let symbol_set = Self { symbol_set, image };
-            if !image.is_null() {
-                unsafe { ffi::zbar_image_ref(image, 1) }
-            }
+            image::set_ref(image, 1);
             Some(symbol_set)
         } else {
             None
@@ -65,11 +64,7 @@ impl Clone for ZBarSymbolSet {
 }
 
 impl Drop for ZBarSymbolSet {
-    fn drop(&mut self) {
-        if !self.image.is_null() {
-            unsafe { ffi::zbar_image_ref(self.image, -1) }
-        }
-    }
+    fn drop(&mut self) { image::set_ref(self.image, -1); }
 }
 
 pub struct SymbolIter {
