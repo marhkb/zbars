@@ -85,10 +85,11 @@ impl From<i32> for ZBarErrorType {
     fn from(error: i32) -> Self { ZBarErrorType::Complex(unsafe { mem::transmute(error) } ) }
 }
 
-pub fn version() -> (u32, u32) {
+pub fn version() -> (u32, u32, u32) {
     unsafe {
-        let mut version = (0, 0);
-        ffi::zbar_version(&mut version.0 as *mut u32, &mut version.1 as *mut u32);
+        let mut version = (0, 0, 0);
+        ffi::zbar_version(
+            &mut version.0 as *mut u32, &mut version.1 as *mut u32, &mut version.2 as *mut u32);
         version
     }
 }
