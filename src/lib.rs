@@ -156,7 +156,7 @@ mod test {
 
     #[test]
     fn test_version() {
-        let (major, minor) = version();
+        let (major, minor, patch) = version();
         assert_ne!(major + minor, 0);
     }
 

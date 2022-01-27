@@ -23,10 +23,10 @@ zbar_fork_if_available = [] # There is a fork of zbar that is more activly devel
 
 [dependencies]
 log = "0.4.5"
-image = { version = "0.19.0", optional = true }
+image = { version = "0.23.14", optional = true }
 
 [dev-dependencies]
-image = "0.19.0"
+image = "0.23.14"
 
 [target.'cfg(target_os="linux")'.dev-dependencies]
 procinfo = "0.4.2"
