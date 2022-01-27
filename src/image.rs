@@ -16,7 +16,8 @@ use image_crate::{
     GenericImage,
     imageops,
     ImageResult,
-    Pixel
+    Pixel,
+    GenericImageView
 };
 use std::{
     error::Error,
@@ -283,7 +284,7 @@ impl ZBarImage<Vec<u8>> {
     /// ```
     pub fn from_generic_image<I>(image: &I) -> Self
         where I: GenericImage + 'static,
-              Vec<u8>: From<Vec<<<I as GenericImage>::Pixel as Pixel>::Subpixel>>
+              Vec<u8>: From<Vec<<<I as GenericImageView>::Pixel as Pixel>::Subpixel>>
     {
         Self::create_image(image.dimensions(), imageops::grayscale(image).into_raw().into())
     }
@@ -297,7 +298,7 @@ impl From<DynamicImage> for ZBarImage<Vec<u8>> {
     fn from(image: DynamicImage) -> Self {
         Self::create_image(image.dimensions(), match image {
             DynamicImage::ImageLuma8(image) => image,
-            other                           => other.to_luma()
+            other                           => other.to_luma8()
         }.into_raw())
     }
 }
